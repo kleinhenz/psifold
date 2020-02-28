@@ -65,8 +65,9 @@ def main():
 
     dtype = create_hdf5_dtype()
     with h5py.File(args.output, "w") as h5f:
+        h5f.attrs["origin"] = str(root)
         for d in dirs:
-            h5path = str(d.relative_to(root.parent))
+            h5path = str(d.relative_to(root))
             print(f"processing {h5path}")
 
             files = sorted(d.glob("*"), key = lambda x : int(x.name))

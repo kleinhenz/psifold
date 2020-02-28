@@ -44,7 +44,7 @@ def read_tf(files):
         tertiary = features["tertiary"].numpy()
         mask = features["mask"].numpy()
 
-        record = np.array((protein_id, primary, evolutionary, tertiary.flatten(), mask), dtype=dtype)
+        record = np.array((protein_id, primary, evolutionary.flatten(), tertiary.flatten(), mask), dtype=dtype)
         data.append(record)
 
     data = np.array(data)

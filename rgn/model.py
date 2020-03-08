@@ -1,62 +1,51 @@
-#!/usr/bin/env python
-
-import argparse
-
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
 
-import numpy as np
-import h5py
-import matplotlib.pyplot as plt
+import math
 
-class ProteinNetDataset(Dataset):
-    def __init__(self, input_file, input_section):
-        self.h5f = h5py.File(input_file, "r")
-        self.dset = self.h5f[input_section]
-
-    def __len__(self):
-        return len(self.dset)
-
-    def __getitem__(self, idx):
-        record = self.dset[idx]
-
-        # primary amino acid sequence (N x 1)
-        primary = torch.from_numpy(record["primary"][:, np.newaxis])
-
-        # PSSM + information content (N x 21)
-        evolutionary = torch.from_numpy(np.reshape(record["evolutionary"], (-1, 21), "C"))
-
-        # coordinate available (N x 1)
-        mask = torch.from_numpy(record["mask"][:, np.newaxis])
-
-        # tertiary structure (3N x 3)
-        tertiary = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C"))
-
-        return {"primary" : primary, "evolutionary" : evolutionary, "mask" : mask, "tertiary" : tertiary}
-
-    def close(self):
-        self.h5f.close()
-
+# adapted from https://github.com/conradry/pytorch-rgn/blob/master/rgn.ipynb
 class RGN(nn.Module):
-    def __init__(self, embed_dim = 20, hidden_size = 50, num_layers = 1, dropout = 0.1):
+    def __init__(self, embed_dim=100, hidden_size=50, linear_units=20, n_layers=1):
         super(RGN, self).__init__()
+        self.embed_dim = embed_dim
+        self.hidden_size = hidden_size
+        self.n_layers = n_layers
+
+        #initialize alphabet to random values between -pi and pi
+        u = torch.distributions.Uniform(-math.pi, math.pi)
+        self.alphabet = nn.Parameter(u.rsample(torch.Size([linear_units, 3])))
+
+        #bond length vectors C-N, N-CA, CA-C
+        self.avg_bond_lens = torch.tensor([1.329, 1.459, 1.525])
+        #bond angle vector, in radians, CA-C-N, C-N-CA, N-CA-C
+        self.avg_bond_angles = torch.tensor([2.034, 2.119, 1.937])
+
         self.embed = nn.Embedding(20, embed_dim) # embedding for primary sequence
-        self.LSTM = nn.LSTM(input_size = embed_dim + 21,
-                            hidden_size = hidden_size,
-                            num_layers = num_layers,
-                            dropout = 0.1)
+        self.lstm = nn.LSTM(input_size=embed_dim + 21,
+                            hidden_size=hidden_size,
+                            num_layers=n_layers,
+                            batch_first=True,
+                            bidirectional=True)
 
-def main():
-    parser = argparse.ArgumentParser(description="train RGN model")
-    parser.add_argument("--input.file", default="input.h5", dest="input_file", help="hdf5 file containing proteinnet records")
-    parser.add_argument("--input.section", default="/training/90", dest="input_section", help="hdf5 section containing proteinnet records")
-    args = parser.parse_args()
+        self.linear = nn.Linear(hidden_size*2, linear_units)
 
-    dset = ProteinNetDataset(args.input_file, args.input_section)
-    print(dset[0]["primary"])
+    def forward(self, inp):
+        # (batch x N)
+        seq = inp["seq"]
 
-    dset.close()
+        # (batch x N x 21)
+        pssm = inp["pssm"]
 
-if __name__ == "__main__":
-    main()
+        # (batch x N x embed_dim)
+        seq_embedding = self.embed(seq)
+
+        # (batch x N x (embed_dim + 21))
+        lstm_in = torch.cat((seq_embedding, pssm), dim=2)
+
+        # (batch x N x (2*hidden_size))
+        lstm_out, _ = self.lstm(lstm_in)
+
+        # (batch x N x linear_units)
+        linear_out = self.linear(lstm_out)
+
+        # TODO

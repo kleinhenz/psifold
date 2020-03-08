@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 import math
 
@@ -48,4 +49,16 @@ class RGN(nn.Module):
         # (batch x N x linear_units)
         linear_out = self.linear(lstm_out)
 
-        # TODO
+        # angularization
+
+        # (batch x N x linear_units)
+        softmax_out = F.softmax(linear_out, dim=2)
+
+        # (batch x N x 3)
+        sin = torch.matmul(softmax_out, torch.sin(self.alphabet))
+        cos = torch.matmul(softmax_out, torch.cos(self.alphabet))
+
+        # (batch x N x 3)
+        phi = torch.atan2(sin, cos)
+
+        return phi

@@ -1,2 +1,2 @@
 from .data import ProteinNetDataset
-from .geometry import compute_internal_coords, compute_cartesian_coords
+from .geometry import internal_coords, cartesian_coords

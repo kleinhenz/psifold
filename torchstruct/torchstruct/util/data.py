@@ -22,7 +22,7 @@ class ProteinNetDataset(Dataset):
         pssm = torch.from_numpy(np.reshape(record["evolutionary"], (-1, 21), "C"))
 
         # coordinate available (N)
-        mask = torch.from_numpy(record["mask"])
+        mask = torch.from_numpy(record["mask"]).bool()
 
         # tertiary structure (3N x 3)
         coords = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C"))

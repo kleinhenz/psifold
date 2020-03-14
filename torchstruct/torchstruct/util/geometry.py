@@ -44,6 +44,58 @@ def internal_coords(coords):
 
     return bond_length, bond_angle, torsion
 
+def extend(A, B, C, c_tilde):
+    """Compute next cartesian coordinate in chain (ABC -> ABCD)
+
+    Args:
+        A, B, C: cartesian coordinates of previous three points in chain
+        c_tilde: SRF coordinates of next point in chain
+
+    Returns:
+        D: cartesian coordinates of next point in chain
+    """
+
+    BC = C - B
+    bc = BC / BC.norm()
+
+    AB = B - A
+    ab = AB / AB.norm()
+
+    N = torch.cross(AB, bc)
+    n = N / N.norm()
+
+    R = torch.stack([bc, torch.cross(n, bc), n], dim=1)
+
+    D = C + torch.matmul(R, c_tilde)
+
+    return D
+
+def geometric_unit(coords, r, theta, phi):
+    """Extend chain of cartesian coordinates
+
+    Args:
+        coords: [Nx3] cartesian coordinates of current chain
+        r, theta, phi: [Mx1] internal coordinates of points to be added to chain
+
+    Returns:
+        coords: [N+Mx3] cartesian coordinates of extended chain
+    """
+
+    assert r.size() == theta.size() == phi.size()
+    N = r.size(0)
+
+    # compute SRF (special reference frame) coordinates
+    c_tilde = torch.stack([r * torch.ones(phi.size()) * torch.cos(theta),
+                           r * torch.cos(phi) * torch.sin(theta),
+                           r * torch.sin(phi) * torch.sin(theta)])
+
+    for i in range(N):
+        A, B, C = coords[-3, :], coords[-2, :], coords[-1, :]
+        D = extend(A, B, C, c_tilde[:,i])
+        coords = torch.cat([coords, D.view(1, 3)])
+
+    return coords
+
 def cartesian_coords(bond_length, bond_angle, torsion):
     """
     Convert from internal to cartesian coordinates
@@ -78,28 +130,6 @@ def cartesian_coords(bond_length, bond_angle, torsion):
     theta = bond_angle[1:]
     phi = torsion
 
-    assert r.size() == theta.size() == phi.size()
-
-    c_tilde = torch.stack([r * torch.ones(phi.size()) * torch.cos(theta),
-                           r * torch.cos(phi) * torch.sin(theta),
-                           r * torch.sin(phi) * torch.sin(theta)])
-
-    for i in range(r.size(0)):
-        A, B, C = coords[-3, :], coords[-2, :], coords[-1, :]
-
-        BC = C - B
-        bc = BC / BC.norm()
-
-        AB = B - A
-        ab = AB / AB.norm()
-
-        N = torch.cross(AB, bc)
-        n = N / N.norm()
-
-        R = torch.stack([bc, torch.cross(n, bc), n], dim=1)
-
-        D = torch.matmul(R, c_tilde[:,i]) + C
-
-        coords = torch.cat([coords, D.view(1, 3)])
+    coords = geometric_unit(coords, r, theta, phi)
 
     return coords

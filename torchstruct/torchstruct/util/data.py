@@ -15,6 +15,9 @@ class ProteinNetDataset(Dataset):
     def __getitem__(self, idx):
         record = self.dset[idx]
 
+        # identifier
+        ID = record["id"]
+
         # primary amino acid sequence (N)
         seq = torch.from_numpy(record["primary"])
 
@@ -27,7 +30,7 @@ class ProteinNetDataset(Dataset):
         # tertiary structure (3N x 3)
         coords = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C"))
 
-        return {"seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords}
+        return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords}
 
     def close(self):
         self.h5f.close()

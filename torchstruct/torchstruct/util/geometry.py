@@ -15,9 +15,9 @@ def internal_coords(coords):
         coords: [N, 3]
 
     Returns:
-        bond_length: [N - 1]
-        bond_angle: [N - 2]
-        torsion: [N -3]
+        bond_length: [N-1]
+        bond_angle: [N-2]
+        torsion: [N-3]
     """
 
     delta = coords[1:] - coords[:-1]
@@ -49,7 +49,7 @@ def extend(A, B, C, c_tilde):
 
     Args:
         A, B, C: cartesian coordinates of previous three points in chain
-        c_tilde: SRF coordinates of next point in chain
+        c_tilde: SRF (special reference frame) coordinates of next point in chain
 
     Returns:
         D: cartesian coordinates of next point in chain
@@ -74,11 +74,11 @@ def geometric_unit(coords, r, theta, phi):
     """Extend chain of cartesian coordinates
 
     Args:
-        coords: [Nx3] cartesian coordinates of current chain
-        r, theta, phi: [Mx1] internal coordinates of points to be added to chain
+        coords: [N, 3] cartesian coordinates of current chain (N >= 3)
+        r, theta, phi: [M, 1] internal coordinates of points to be added to chain
 
     Returns:
-        coords: [N+Mx3] cartesian coordinates of extended chain
+        coords: [N+M, 3] cartesian coordinates of extended chain
     """
 
     assert r.size() == theta.size() == phi.size()
@@ -89,6 +89,7 @@ def geometric_unit(coords, r, theta, phi):
                            r * torch.cos(phi) * torch.sin(theta),
                            r * torch.sin(phi) * torch.sin(theta)])
 
+    # extend chain
     for i in range(N):
         A, B, C = coords[-3, :], coords[-2, :], coords[-1, :]
         D = extend(A, B, C, c_tilde[:,i])
@@ -121,8 +122,8 @@ def cartesian_coords(bond_length, bond_angle, torsion):
     # adapted from https://github.com/conradry/pytorch-rgn/blob/master/model.py
 
     # initial coordinates
+    A = torch.zeros(3, dtype=bond_length.dtype)
     B = torch.tensor([bond_length[0], 0.0, 0.0])
-    A = torch.zeros_like(B)
     C = B + torch.tensor([bond_length[1] * torch.cos(bond_angle[0]), bond_length[1] * torch.sin(bond_angle[0]), 0.0])
     coords = torch.stack([A, B, C])
 

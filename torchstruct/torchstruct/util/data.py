@@ -3,6 +3,19 @@ import numpy as np
 
 import torch
 from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_sequence, pack_sequence
+
+def collate_fn(batch):
+    length = torch.tensor([x["seq"].size(0) for x in batch])
+    sorted_length, sorted_indices = length.sort(0, True)
+
+    ID = [batch[i]["id"] for i in sorted_indices]
+    seq = pad_sequence([batch[i]["seq"] for i in sorted_indices])
+    pssm = pad_sequence([batch[i]["pssm"] for i in sorted_indices])
+    mask = pad_sequence([batch[i]["mask"] for i in sorted_indices])
+    coords = pad_sequence([batch[i]["coords"] for i in sorted_indices])
+
+    return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords, "length" : sorted_length}
 
 class ProteinNetDataset(Dataset):
     def __init__(self, input_file, input_section):

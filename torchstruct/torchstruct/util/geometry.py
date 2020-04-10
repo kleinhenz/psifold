@@ -81,8 +81,9 @@ def internal_coords(coords):
 
     return bond_length, bond_angle, torsion
 
-def extend(A, B, C, c_tilde):
+def nerf_extend_single(A, B, C, c_tilde):
     """Compute next cartesian coordinate in chain (ABC -> ABCD)
+    using natural extension reference frame (nerf)
 
     Args:
         A, B, C: [batch, 3] cartesian coordinates of previous three points in chain
@@ -107,8 +108,9 @@ def extend(A, B, C, c_tilde):
 
     return D
 
-def geometric_unit(coords, r, theta, phi):
+def nerf_extend_multi(coords, r, theta, phi):
     """Extend chain of cartesian coordinates
+    using natural extension references frame (nerf)
 
     For a set of points ABCD:
         * the bond lengths (r) are the lengths of the vectors AB, BC, CD
@@ -134,7 +136,53 @@ def geometric_unit(coords, r, theta, phi):
     # extend chain
     for i in range(N):
         A, B, C = coords[-3], coords[-2], coords[-1]
-        D = extend(A, B, C, c_tilde[i])
+        D = nerf_extend_single(A, B, C, c_tilde[i])
         coords = torch.cat([coords, D.view(1, -1, 3)])
 
     return coords
+
+class GeometricUnit(nn.Module):
+    """input -> torsion angles -> cartesian coords"""
+
+    def __init__(self, input_size, linear_units = 20):
+        super(GeometricUnit, self).__init__()
+
+        self.linear = nn.Linear(input_size, linear_units)
+
+        #initialize alphabet to random values between -pi and pi
+        u = torch.distributions.Uniform(-math.pi, math.pi)
+        self.alphabet = nn.Parameter(u.rsample(torch.Size([linear_units, 3])))
+
+        # TODO make bond lengths/angles parameters instead of constant?
+
+        # [C-N, N-CA, CA-C]
+        self.bond_lengths = torch.tensor([132.868, 145.801, 152.326])
+        # [CA-C-N, C-N-CA, N-CA-C]
+        self.bond_angles = torch.tensor([2.028, 2.124, 1.941])
+
+    def forward(self, inp):
+        L, B = inp.size(0), inp.size(1)
+
+        # (L x B x linear_units)
+        x = F.softmax(self.linear(inp), dim=2)
+
+        # (L x B x 3)
+        sin = torch.matmul(x, torch.sin(self.alphabet))
+        cos = torch.matmul(x, torch.cos(self.alphabet))
+
+        # (L x B x 3)
+        phi = torch.atan2(sin, cos)
+
+        # initial coords
+        # (3 x B x 3)
+        coords = torch.eye(3).unsqueeze(1).repeat(1, B, 1)
+
+        # (3 x B)
+        r = self.bond_lengths.unsqueeze(1).repeat(1, B)
+        theta = self.bond_angles.unsqueeze(1).repeat(1, B)
+
+        for i in range(L):
+            coords = nerf_extend_multi(coords, r, theta, phi[i].transpose(0, 1))
+
+        # ignore first 3 initialization coordinates
+        return coords[3:, :, :]

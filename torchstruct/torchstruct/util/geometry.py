@@ -3,6 +3,41 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
+def dRMSD(x_hat, x, mask, length_norm=False):
+    """Compute dRMSD loss
+
+    Args:
+        x_hat: (L, B, D)
+        x: (L, B, D)
+        mask: (L, B)
+        length_norm: (bool) divide dRMSD by L(L - 1)
+
+    Returns:
+        loss: (scalar)
+    """
+
+    L, B, D = x_hat.size()
+    assert D == 3
+
+    loss = []
+    for i in range(B):
+        mask_i = mask[:, i].view(-1, 1)
+        Li = mask_i.sum()
+
+        x_hat_i = torch.masked_select(x_hat[:, i, :], mask_i).view(-1, D)
+        x_i = torch.masked_select(x[:, i, :], mask_i).view(-1, D)
+
+        d_hat_i = F.pdist(x_hat_i)
+        d_i = F.pdist(x_i)
+
+        loss_i = torch.norm(d_hat_i - d_i)
+        if length_norm:
+            loss_i = loss_i / (Li.pow(2) - Li)
+
+        loss.append(loss_i)
+
+    return sum(loss) / B
+
 def internal_coords(coords):
     """Convert from cartesian to internal coordinates
 
@@ -12,12 +47,12 @@ def internal_coords(coords):
         * the torsions (phi) are the angles between the planes spaned by ABC and BCD
 
     Args:
-        coords: [N, batch, 3]
+        coords: (N, batch, 3)
 
     Returns:
-        r: [N-1, batch]
-        theta: [N-2, batch]
-        phi: [N-3, batch]
+        r: (N-1, batch)
+        theta: (N-2, batch)
+        phi: (N-3, batch)
     """
 
     assert coords.ndim == 3
@@ -81,11 +116,11 @@ def geometric_unit(coords, r, theta, phi):
         * the torsions (phi) are the angles between the planes spaned by ABC and BCD
 
     Args:
-        coords: [N, batch, 3] cartesian coordinates of current chain (N >= 3)
-        r, theta, phi: [M, batch] internal coordinates of points to be added to chain
+        coords: (N, batch, 3) cartesian coordinates of current chain (N >= 3)
+        r, theta, phi: (M, batch) internal coordinates of points to be added to chain
 
     Returns:
-        coords: [N+M, batch, 3] cartesian coordinates of extended chain
+        coords: (N+M, batch, 3) cartesian coordinates of extended chain
     """
 
     assert r.size() == theta.size() == phi.size()

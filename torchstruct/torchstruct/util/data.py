@@ -18,9 +18,8 @@ def collate_fn(batch):
     return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords, "length" : sorted_length}
 
 class ProteinNetDataset(Dataset):
-    def __init__(self, input_file, input_section):
-        self.h5f = h5py.File(input_file, "r")
-        self.dset = self.h5f[input_section]
+    def __init__(self, h5dset):
+        self.dset = h5dset
 
     def __len__(self):
         return len(self.dset)
@@ -44,6 +43,3 @@ class ProteinNetDataset(Dataset):
         coords = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C"))
 
         return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords}
-
-    def close(self):
-        self.h5f.close()

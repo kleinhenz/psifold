@@ -12,7 +12,8 @@ def dRMSD(x_hat, x, mask):
         mask: (L, B)
 
     Returns:
-        loss: (scalar)
+        dRMSD: (scalar) batch averaged root mean square error
+               of pairwise distance matrices of x and x_hat
     """
 
     L, B, D = x_hat.size()

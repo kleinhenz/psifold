@@ -18,7 +18,8 @@ def dRMSD(x_hat, x, mask):
     L, B, D = x_hat.size()
     assert D == 3
 
-    loss = []
+    # loop over each batch
+    drmsd = []
     for i in range(B):
         mask_i = mask[:, i].view(-1, 1)
 
@@ -26,11 +27,11 @@ def dRMSD(x_hat, x, mask):
         x_i = torch.masked_select(x[:, i, :], mask_i).view(-1, D)
 
         delta = F.pdist(x_hat_i) - F.pdist(x_i)
-        loss_i = torch.norm(delta, 2.0) / (delta.numel()**0.5)
+        drmsd_i = delta.pow(2.0).mean().pow(0.5)
 
-        loss.append(loss_i)
+        drmsd.append(drmsd_i)
 
-    return sum(loss) / B
+    return sum(drmsd) / B
 
 def internal_coords(coords):
     """Convert from cartesian to internal coordinates

@@ -3,14 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
-def dRMSD(x_hat, x, mask, length_norm=False):
+def dRMSD(x_hat, x, mask):
     """Compute dRMSD loss
 
     Args:
         x_hat: (L, B, D)
         x: (L, B, D)
         mask: (L, B)
-        length_norm: (bool) divide dRMSD by L(L - 1)
 
     Returns:
         loss: (scalar)
@@ -22,17 +21,12 @@ def dRMSD(x_hat, x, mask, length_norm=False):
     loss = []
     for i in range(B):
         mask_i = mask[:, i].view(-1, 1)
-        Li = mask_i.sum()
 
         x_hat_i = torch.masked_select(x_hat[:, i, :], mask_i).view(-1, D)
         x_i = torch.masked_select(x[:, i, :], mask_i).view(-1, D)
 
-        d_hat_i = F.pdist(x_hat_i)
-        d_i = F.pdist(x_i)
-
-        loss_i = torch.norm(d_hat_i - d_i)
-        if length_norm:
-            loss_i = loss_i / (Li.pow(2) - Li)
+        delta = F.pdist(x_hat_i) - F.pdist(x_i)
+        loss_i = torch.norm(delta, 2.0) / (delta.numel()**0.5)
 
         loss.append(loss_i)
 

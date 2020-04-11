@@ -42,16 +42,17 @@ def main():
 
     for epoch in range(args.epochs):
         train_loss = 0.0
-        for i, batch in enumerate(dloader):
+        for batch_idx, batch in enumerate(dloader):
             out = model(batch)
             optimizer.zero_grad()
-            loss = dRMSD(out, batch["coords"], batch["mask"], length_norm=False)
+            loss = dRMSD(out, batch["coords"], batch["mask"])
             loss.backward()
             train_loss += loss.data
             optimizer.step()
 
+        train_loss /= len(dloader)
         out = model(val)
-        val_loss = dRMSD(out, val["coords"], val["mask"], length_norm=False)
+        val_loss = dRMSD(out, val["coords"], val["mask"])
 
         print(f"epoch {epoch:d}: train_loss = {train_loss:0.4e}, val_loss = {val_loss:0.4e}")
 

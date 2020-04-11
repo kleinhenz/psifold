@@ -47,6 +47,7 @@ def main():
             optimizer.zero_grad()
             loss = dRMSD(out, batch["coords"], batch["mask"])
             loss.backward()
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=50.0)
             train_loss += loss.data
             optimizer.step()
 

@@ -25,24 +25,21 @@ def main():
 
     h5f = h5py.File(args.input_file, "r")
 
-    train = ProteinNetDataset(h5f[args.train_section])
-    if args.train_size > 0:
-        train = Subset(train, range(args.train_size))
+    train_dset = ProteinNetDataset(h5f[args.train_section])
+    if args.train_size > 0: train_dset = Subset(train_dset, range(args.train_size))
+    train_dloader = torch.utils.data.DataLoader(train_dset, batch_size = args.batch_size, shuffle=True, collate_fn=collate_fn)
 
-    dloader = torch.utils.data.DataLoader(train, batch_size = args.batch_size, shuffle=True, collate_fn=collate_fn)
-
-    val = ProteinNetDataset(h5f[args.val_section])
-    val = collate_fn([val[i] for i in range(len(val))])
+    val_dset = ProteinNetDataset(h5f[args.val_section])
+    val_dloader = torch.utils.data.DataLoader(val_dset, batch_size = args.batch_size, shuffle=False, collate_fn=collate_fn)
 
     model = RGN(hidden_size=100, linear_units=20, n_layers=2)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
-    N = len(train)
-    N_batches = N // args.batch_size
-
     for epoch in range(args.epochs):
         train_loss = 0.0
-        for batch_idx, batch in enumerate(dloader):
+        val_loss = 0.0
+
+        for batch in train_dloader:
             out = model(batch)
             optimizer.zero_grad()
             loss = dRMSD(out, batch["coords"], batch["mask"])
@@ -51,9 +48,13 @@ def main():
             train_loss += loss.data
             optimizer.step()
 
-        train_loss /= len(dloader)
-        out = model(val)
-        val_loss = dRMSD(out, val["coords"], val["mask"])
+        for batch in val_dloader:
+            out = model(batch)
+            loss = dRMSD(out, batch["coords"], batch["mask"])
+            val_loss += loss.data
+
+        train_loss /= len(train_dloader)
+        val_loss /= len(val_dloader)
 
         print(f"epoch {epoch:d}: train_loss = {train_loss:0.4e}, val_loss = {val_loss:0.4e}")
 

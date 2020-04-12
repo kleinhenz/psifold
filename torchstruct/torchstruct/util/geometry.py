@@ -152,9 +152,9 @@ class GeometricUnit(nn.Module):
         # TODO make bond lengths/angles parameters instead of constant?
 
         # [C-N, N-CA, CA-C]
-        self.bond_lengths = torch.tensor([132.868, 145.801, 152.326])
+        self.bond_lengths = nn.Parameter(torch.tensor([132.868, 145.801, 152.326]))
         # [CA-C-N, C-N-CA, N-CA-C]
-        self.bond_angles = torch.tensor([2.028, 2.124, 1.941])
+        self.bond_angles = nn.Parameter(torch.tensor([2.028, 2.124, 1.941]))
 
     def forward(self, inp):
         L, B = inp.size(0), inp.size(1)

@@ -125,7 +125,7 @@ def nerf_extend_multi(coords, r, theta, phi):
     N = r.size(0)
 
     # compute SRF (special reference frame) coordinates
-    c_tilde = torch.stack([r * torch.ones(phi.size()) * torch.cos(theta),
+    c_tilde = torch.stack([r * torch.ones_like(phi) * torch.cos(theta),
                            r * torch.cos(phi) * torch.sin(theta),
                            r * torch.sin(phi) * torch.sin(theta)], dim=2)
 

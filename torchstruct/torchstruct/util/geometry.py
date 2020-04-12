@@ -3,6 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
+def pdist(x):
+    assert x.ndim == 2
+    return torch.norm((x - x[:, None]), p=2.0, dim=2)
+
 def dRMSD(x_hat, x, mask):
     """Compute dRMSD loss
 
@@ -23,12 +27,14 @@ def dRMSD(x_hat, x, mask):
     drmsd = []
     for i in range(B):
         mask_i = mask[:, i].view(-1, 1)
+        L_i = torch.sum(mask_i)
 
         x_hat_i = torch.masked_select(x_hat[:, i, :], mask_i).view(-1, D)
         x_i = torch.masked_select(x[:, i, :], mask_i).view(-1, D)
 
-        delta = F.pdist(x_hat_i) - F.pdist(x_i)
-        drmsd_i = delta.pow(2.0).mean().pow(0.5)
+        # use custom pdist function (see https://github.com/pytorch/pytorch/issues/25045)
+        delta = pdist(x_hat_i) - pdist(x_i)
+        drmsd_i = delta.pow(2.0).sum().div(L_i * (L_i - 1.0)).pow(0.5)
 
         drmsd.append(drmsd_i)
 

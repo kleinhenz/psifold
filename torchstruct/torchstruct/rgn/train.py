@@ -38,25 +38,25 @@ def main():
         val_loss = 0.0
 
         for batch in train_dloader:
-            out = model(batch)
+            seq, pssm, length, coords, mask = batch["seq"], batch["pssm"], batch["length"], batch["coords"], batch["mask"]
+            out = model(seq, pssm, length)
             optimizer.zero_grad()
-            loss = dRMSD(out, batch["coords"], batch["mask"])
+            loss = dRMSD(out, coords, mask)
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=50.0)
             train_loss += loss.data
             optimizer.step()
 
         for batch in val_dloader:
-            out = model(batch)
-            loss = dRMSD(out, batch["coords"], batch["mask"])
+            seq, pssm, length, coords, mask = batch["seq"], batch["pssm"], batch["length"], batch["coords"], batch["mask"]
+            out = model(seq, pssm, length)
+            loss = dRMSD(out, coords, mask)
             val_loss += loss.data
 
         train_loss /= len(train_dloader)
         val_loss /= len(val_dloader)
 
         print(f"epoch {epoch:d}: train_loss = {train_loss:0.4e}, val_loss = {val_loss:0.4e}")
-
-    h5f.close()
 
 if __name__ == "__main__":
     main()

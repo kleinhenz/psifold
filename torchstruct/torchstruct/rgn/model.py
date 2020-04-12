@@ -25,14 +25,12 @@ class RGN(nn.Module):
 
         self.geometry = GeometricUnit(hidden_size*2, linear_units)
 
-    def forward(self, inp):
-        # (L x B)
-        seq = inp["seq"]
-        length = inp["length"]
-        L, B = seq.size()
-
-        # (L x B x 21)
-        pssm = inp["pssm"]
+    def forward(self, seq, pssm, length):
+        """
+        seq: (L x B)
+        pssm: (L x B x 21)
+        length: (L,)
+        """
 
         # (L x B x embed_dim)
         seq_embedding = self.embed(seq)

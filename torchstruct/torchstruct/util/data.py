@@ -18,8 +18,9 @@ def collate_fn(batch):
     return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords, "length" : sorted_length}
 
 class ProteinNetDataset(Dataset):
-    def __init__(self, h5dset):
-        self.dset = h5dset
+    def __init__(self, fname, section):
+        with h5py.File(fname, "r") as h5f:
+            self.dset = h5f[section][:]
 
     def __len__(self):
         return len(self.dset)

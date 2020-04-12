@@ -23,13 +23,11 @@ def main():
     parser.add_argument("--train_size", type=int, default=-1)
     args = parser.parse_args()
 
-    h5f = h5py.File(args.input_file, "r")
-
-    train_dset = ProteinNetDataset(h5f[args.train_section])
+    train_dset = ProteinNetDataset(args.input_file, args.train_section)
     if args.train_size > 0: train_dset = Subset(train_dset, range(args.train_size))
     train_dloader = torch.utils.data.DataLoader(train_dset, batch_size = args.batch_size, shuffle=True, collate_fn=collate_fn)
 
-    val_dset = ProteinNetDataset(h5f[args.val_section])
+    val_dset = ProteinNetDataset(args.input_file, args.val_section)
     val_dloader = torch.utils.data.DataLoader(val_dset, batch_size = args.batch_size, shuffle=False, collate_fn=collate_fn)
 
     model = RGN(hidden_size=100, linear_units=20, n_layers=2)

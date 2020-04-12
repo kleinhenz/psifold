@@ -171,7 +171,7 @@ class GeometricUnit(nn.Module):
 
         # initial coords
         # (3 x B x 3)
-        coords = torch.eye(3).unsqueeze(1).repeat(1, B, 1)
+        coords = torch.eye(3, dtype=inp.dtype, device=inp.device).unsqueeze(1).repeat(1, B, 1)
 
         # (3 x B)
         r = self.bond_lengths.unsqueeze(1).repeat(1, B)

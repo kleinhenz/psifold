@@ -6,7 +6,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 import math
 
-from torchstruct.util import GeometricUnit
+from torchstruct import GeometricUnit
 
 # adapted from https://github.com/conradry/pytorch-rgn/blob/master/rgn.ipynb
 class RGN(nn.Module):

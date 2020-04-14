@@ -155,8 +155,6 @@ class GeometricUnit(nn.Module):
         u = torch.distributions.Uniform(-math.pi, math.pi)
         self.alphabet = nn.Parameter(u.rsample(torch.Size([linear_units, 3])))
 
-        # TODO make bond lengths/angles parameters instead of constant?
-
         # [C-N, N-CA, CA-C]
         self.bond_lengths = nn.Parameter(torch.tensor([132.868, 145.801, 152.326]))
         # [CA-C-N, C-N-CA, N-CA-C]

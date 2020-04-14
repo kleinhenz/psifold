@@ -18,6 +18,8 @@ def validate(model, val_dloader, device):
             loss = dRMSD(out, batch["coords"], batch["mask"])
             val_loss += loss.data
 
+    val_loss /= len(val_dloader)
+
     return val_loss
 
 def train(model, optimizer, train_dloader, device, output_frequency = 60):

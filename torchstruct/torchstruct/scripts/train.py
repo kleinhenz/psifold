@@ -11,7 +11,7 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 
-from torchstruct import ProteinNetDataset, collate_fn, RGN, train, validate
+from torchstruct import ProteinNetDataset, collate_fn, train, validate, RGN
 
 def main():
     parser = argparse.ArgumentParser(description="train RGN model")
@@ -21,11 +21,16 @@ def main():
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--train_size", type=int, default=-1)
+    parser.add_argument("--max_len", type=int, default=-1)
     args = parser.parse_args()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     train_dset = ProteinNetDataset(args.input_file, args.train_section)
+    if args.max_len > 0:
+        indices = [i for i, x in enumerate(train_dset) if x["seq"].numel() <= args.max_len]
+        train_dset = Subset(train_dset, indices)
+
     if args.train_size > 0: train_dset = Subset(train_dset, range(args.train_size))
     train_dloader = torch.utils.data.DataLoader(train_dset, batch_size = args.batch_size, shuffle=True, collate_fn=collate_fn)
 

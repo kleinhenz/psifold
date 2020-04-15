@@ -17,7 +17,7 @@ class RGN(nn.Module):
     * https://github.com/aqlaboratory/rgn
     * https://github.com/conradry/pytorch-rgn/
     """
-    def __init__(self, hidden_size=50, linear_units=20, n_layers=1, dropout=0.5):
+    def __init__(self, hidden_size=64, linear_units=32, n_layers=2, dropout=0.1):
         super(RGN, self).__init__()
         self.hidden_size = hidden_size
         self.n_layers = n_layers

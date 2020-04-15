@@ -41,7 +41,7 @@ def main():
     if args.model == "psifold":
         model = PsiFold(embed_dim=20, hidden_size=100, linear_units=20, n_layers=1, nhead=1)
     elif args.model == "rgn":
-        model = RGN(hidden_size=100, linear_units=20, n_layers=2)
+        model = RGN(hidden_size=64, linear_units=32, n_layers=2, dropout=0.1)
 
     model.to(device)
 

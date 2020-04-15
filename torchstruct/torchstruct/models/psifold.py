@@ -24,12 +24,12 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
-class GTN(nn.Module):
+class PsiFold(nn.Module):
     """
-    Geometric Transformer Network implementation
+    PsiFold implementation
     """
     def __init__(self, embed_dim=20, hidden_size=50, linear_units=20, n_layers=1, nhead = 5, dropout=0.5):
-        super(GTN, self).__init__()
+        super(PsiFold, self).__init__()
         self.embed_dim = embed_dim
         self.hidden_size = hidden_size
         self.n_layers = n_layers
@@ -40,6 +40,7 @@ class GTN(nn.Module):
 
         self.pos_encoder = PositionalEncoding(hidden_size, dropout)
 
+        # TODO add parameter for dim_feedforward
         encoder_layer = nn.TransformerEncoderLayer(hidden_size, nhead=nhead)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers = n_layers)
 

@@ -11,7 +11,7 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 
-from torchstruct import ProteinNetDataset, collate_fn, train, validate, RGN, GTN
+from torchstruct import ProteinNetDataset, collate_fn, train, validate, RGN, PsiFold
 
 def main():
     parser = argparse.ArgumentParser(description="train RGN model")
@@ -22,7 +22,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--train_size", type=int, default=-1)
     parser.add_argument("--max_len", type=int, default=-1)
-    parser.add_argument("--model", choices=["RGN", "GTN"], default="RGN")
+    parser.add_argument("--model", choices=["rgn", "psifold"], default="psifold")
     args = parser.parse_args()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -38,10 +38,10 @@ def main():
     val_dset = ProteinNetDataset(args.input_file, args.val_section)
     val_dloader = torch.utils.data.DataLoader(val_dset, batch_size = args.batch_size, shuffle=False, collate_fn=collate_fn)
 
-    if args.model == "RGN":
+    if args.model == "psifold":
+        model = PsiFold(embed_dim=20, hidden_size=100, linear_units=20, n_layers=1, nhead=1)
+    elif args.model == "rgn":
         model = RGN(embed_dim=20, hidden_size=100, linear_units=20, n_layers=2)
-    elif args.model == "GTN":
-        model = GTN(embed_dim=20, hidden_size=100, linear_units=20, n_layers=2, nhead=4)
 
     model.to(device)
 

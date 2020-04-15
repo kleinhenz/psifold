@@ -17,15 +17,12 @@ class RGN(nn.Module):
     * https://github.com/aqlaboratory/rgn
     * https://github.com/conradry/pytorch-rgn/
     """
-    def __init__(self, embed_dim=20, hidden_size=50, linear_units=20, n_layers=1, dropout=0.5):
+    def __init__(self, hidden_size=50, linear_units=20, n_layers=1, dropout=0.5):
         super(RGN, self).__init__()
-        self.embed_dim = embed_dim
         self.hidden_size = hidden_size
         self.n_layers = n_layers
 
-        # TODO make this one-hot to match original implementation?
-        self.embed = nn.Embedding(20, embed_dim) # embedding for primary sequence
-        self.lstm = nn.LSTM(input_size=embed_dim + 21,
+        self.lstm = nn.LSTM(input_size=41,
                             hidden_size=hidden_size,
                             num_layers=n_layers,
                             batch_first=False,
@@ -41,11 +38,11 @@ class RGN(nn.Module):
         length: (L,)
         """
 
-        # (L x B x embed_dim)
-        seq_embedding = self.embed(seq)
+        # (L x B x 20)
+        seq = F.one_hot(seq, 20).type(pssm.dtype)
 
         # (L x B x (embed_dim + 21))
-        lstm_in = torch.cat((seq_embedding, pssm), dim=2)
+        lstm_in = torch.cat((seq, pssm), dim=2)
         lstm_in = pack_padded_sequence(lstm_in, length)
 
         # (L x B x (2*hidden_size))

@@ -10,7 +10,7 @@ from torchstruct import GeometricUnit
 
 # adapted from https://github.com/conradry/pytorch-rgn/blob/master/rgn.ipynb
 class RGN(nn.Module):
-    def __init__(self, embed_dim=100, hidden_size=50, linear_units=20, n_layers=1):
+    def __init__(self, embed_dim=20, hidden_size=50, linear_units=20, n_layers=1, dropout=0.5):
         super(RGN, self).__init__()
         self.embed_dim = embed_dim
         self.hidden_size = hidden_size
@@ -21,6 +21,7 @@ class RGN(nn.Module):
                             hidden_size=hidden_size,
                             num_layers=n_layers,
                             batch_first=False,
+                            dropout=dropout,
                             bidirectional=True)
 
         self.geometry = GeometricUnit(hidden_size*2, linear_units)

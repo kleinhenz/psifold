@@ -39,7 +39,7 @@ def main():
     val_dloader = torch.utils.data.DataLoader(val_dset, batch_size = args.batch_size, shuffle=False, collate_fn=collate_fn)
 
     if args.model == "psifold":
-        model = PsiFold(embed_dim=20, hidden_size=100, linear_units=20, n_layers=1, nhead=1)
+        model = PsiFold(hidden_size=64, linear_units=32, n_layers=2, nhead=4, dim_feedforward=256, dropout=0.1)
     elif args.model == "rgn":
         model = RGN(hidden_size=64, linear_units=32, n_layers=2, dropout=0.1)
 

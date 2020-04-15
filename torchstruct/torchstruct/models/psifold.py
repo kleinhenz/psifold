@@ -28,21 +28,16 @@ class PsiFold(nn.Module):
     """
     PsiFold implementation
     """
-    def __init__(self, embed_dim=20, hidden_size=50, linear_units=20, n_layers=1, nhead = 5, dropout=0.5):
+    def __init__(self, hidden_size=64, linear_units=32, n_layers=2, nhead=4, dim_feedforward=256, dropout=0.1):
         super(PsiFold, self).__init__()
-        self.embed_dim = embed_dim
         self.hidden_size = hidden_size
         self.n_layers = n_layers
 
-        self.embed = nn.Embedding(20, embed_dim) # embedding for primary sequence
-        # TODO replace by larger embedding layer?
-        self.fc = nn.Linear(embed_dim + 21, hidden_size)
-
+        self.fc = nn.Linear(41, hidden_size)
         self.pos_encoder = PositionalEncoding(hidden_size, dropout)
 
-        # TODO add parameter for dim_feedforward
-        encoder_layer = nn.TransformerEncoderLayer(hidden_size, nhead=nhead)
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers = n_layers)
+        encoder_layer = nn.TransformerEncoderLayer(hidden_size, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
 
         self.geometry = GeometricUnit(hidden_size, linear_units)
 
@@ -55,10 +50,10 @@ class PsiFold(nn.Module):
 
         L, B = seq.size()
 
-        # (L x B x embed_dim)
-        seq_embedding = self.embed(seq)
+        # (L x B x 20)
+        seq = F.one_hot(seq, 20).type(pssm.dtype)
 
-        encoder_in = torch.cat((seq_embedding, pssm), dim=2)
+        encoder_in = torch.cat((seq, pssm), dim=2)
         encoder_in = self.fc(encoder_in)
         encoder_in = self.pos_encoder(encoder_in)
 

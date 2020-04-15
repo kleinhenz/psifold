@@ -1,4 +1,4 @@
 from .data import collate_fn, ProteinNetDataset
 from .geometry import dRMSD, internal_coords, nerf_extend_single, nerf_extend_multi, GeometricUnit
-from .models import RGN
+from .models import RGN, GTN
 from .util import train, validate

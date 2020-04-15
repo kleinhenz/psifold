@@ -11,7 +11,7 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 
-from torchstruct import ProteinNetDataset, collate_fn, train, validate, RGN
+from torchstruct import ProteinNetDataset, collate_fn, train, validate, RGN, GTN
 
 def main():
     parser = argparse.ArgumentParser(description="train RGN model")
@@ -22,6 +22,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--train_size", type=int, default=-1)
     parser.add_argument("--max_len", type=int, default=-1)
+    parser.add_argument("--model", choices=["RGN", "GTN"], default="RGN")
     args = parser.parse_args()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -37,7 +38,11 @@ def main():
     val_dset = ProteinNetDataset(args.input_file, args.val_section)
     val_dloader = torch.utils.data.DataLoader(val_dset, batch_size = args.batch_size, shuffle=False, collate_fn=collate_fn)
 
-    model = RGN(hidden_size=100, linear_units=20, n_layers=2)
+    if args.model == "RGN":
+        model = RGN(embed_dim=20, hidden_size=100, linear_units=20, n_layers=2)
+    elif args.model == "GTN":
+        model = GTN(embed_dim=20, hidden_size=100, linear_units=20, n_layers=2, nhead=4)
+
     model.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-3)

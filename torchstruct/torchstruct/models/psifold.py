@@ -57,7 +57,7 @@ class PsiFold(nn.Module):
         encoder_in = self.fc(encoder_in)
         encoder_in = self.pos_encoder(encoder_in)
 
-        mask = torch.arange(L).expand(B, L) >= length.unsqueeze(1)
+        mask = torch.arange(L, device=seq.device).expand(B, L) >= length.unsqueeze(1)
 
         # (L x B x hidden_size)
         encoder_out = self.encoder(encoder_in, src_key_padding_mask=mask)

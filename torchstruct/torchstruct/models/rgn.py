@@ -8,14 +8,22 @@ import math
 
 from torchstruct import GeometricUnit
 
-# adapted from https://github.com/conradry/pytorch-rgn/blob/master/rgn.ipynb
 class RGN(nn.Module):
+    """
+    Recurrent Geometric Network implementation
+
+    References:
+    * https://doi.org/10.1016/j.cels.2019.03.006
+    * https://github.com/aqlaboratory/rgn
+    * https://github.com/conradry/pytorch-rgn/
+    """
     def __init__(self, embed_dim=20, hidden_size=50, linear_units=20, n_layers=1, dropout=0.5):
         super(RGN, self).__init__()
         self.embed_dim = embed_dim
         self.hidden_size = hidden_size
         self.n_layers = n_layers
 
+        # TODO make this one-hot to match original implementation?
         self.embed = nn.Embedding(20, embed_dim) # embedding for primary sequence
         self.lstm = nn.LSTM(input_size=embed_dim + 21,
                             hidden_size=hidden_size,

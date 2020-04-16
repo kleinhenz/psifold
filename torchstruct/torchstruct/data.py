@@ -5,6 +5,31 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence, pack_sequence
 
+class BucketByLenRandomBatchSampler(torch.utils.data.Sampler):
+    """
+    Bucket example by length and randomly sample from buckets
+    """
+    def __init__(self, lengths, batch_size=32, bucket_size=1024):
+        self.batch_size = batch_size
+        self.buckets = torch.argsort(lengths).split(bucket_size)
+
+        self.nbatches = 0
+        for bucket in self.buckets:
+            self.nbatches += (len(bucket) + batch_size - 1) // batch_size
+
+    def __iter__(self):
+        batches = []
+        for bucket in self.buckets:
+            for indices in torch.randperm(len(bucket)).split(self.batch_size):
+                batches.append(bucket[indices])
+        assert len(batches) == self.nbatches
+
+        for i in torch.randperm(len(batches)):
+            yield batches[i]
+
+    def __len__(self):
+        return self.nbatches
+
 def collate_fn(batch):
     length = torch.tensor([x["seq"].size(0) for x in batch])
     sorted_length, sorted_indices = length.sort(0, True)

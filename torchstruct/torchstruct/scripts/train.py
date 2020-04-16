@@ -11,7 +11,7 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 
-from torchstruct import ProteinNetDataset, collate_fn, train, validate, RGN, PsiFold
+from torchstruct import ProteinNetDataset, collate_fn, BucketByLenRandomBatchSampler, train, validate, RGN, PsiFold
 
 def main():
     parser = argparse.ArgumentParser(description="train RGN model")
@@ -33,7 +33,10 @@ def main():
         train_dset = Subset(train_dset, indices)
 
     if args.train_size > 0: train_dset = Subset(train_dset, range(args.train_size))
-    train_dloader = torch.utils.data.DataLoader(train_dset, batch_size = args.batch_size, shuffle=True, collate_fn=collate_fn)
+
+    lengths = torch.tensor([x["seq"].shape[0] for x in train_dset])
+    sampler = BucketByLenRandomBatchSampler(lengths, batch_size=args.batch_size, bucket_size=32*args.batch_size)
+    train_dloader = torch.utils.data.DataLoader(train_dset, batch_sampler=sampler, collate_fn=collate_fn)
 
     val_dset = ProteinNetDataset(args.input_file, args.val_section)
     val_dloader = torch.utils.data.DataLoader(val_dset, batch_size = args.batch_size, shuffle=False, collate_fn=collate_fn)

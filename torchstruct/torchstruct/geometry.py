@@ -88,11 +88,11 @@ def nerf_extend_single(A, B, C, c_tilde):
     using natural extension reference frame (nerf)
 
     Args:
-        A, B, C: [batch, 3] cartesian coordinates of previous three points in chain
-        c_tilde: [batch, 3] SRF (special reference frame) coordinates of next point in chain
+        A, B, C: (batch, 3) cartesian coordinates of previous three points in chain
+        c_tilde: (batch, 3) SRF (special reference frame) coordinates of next point in chain
 
     Returns:
-        D: [batch, 3] cartesian coordinates of next point in chain
+        D: (batch, 3) cartesian coordinates of next point in chain
     """
 
     BC = C - B

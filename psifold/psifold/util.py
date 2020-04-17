@@ -3,7 +3,7 @@ import datetime
 import torch
 import torch.nn as nn
 
-from psifold import dRMSD
+from psifold import dRMSD, RGN, PsiFold
 
 def validate(model, val_dloader, device):
     model.eval()
@@ -47,3 +47,12 @@ def train(model, optimizer, train_dloader, device, output_frequency = 60):
     train_loss /= len(train_dloader)
 
     return train_loss
+
+def make_model(model_name, model_args):
+    if model_name == "rgn":
+        model = RGN(**model_args)
+    elif model_name == "psifold":
+        model = PsiFold(**model_args)
+    else:
+        raise Exception(f"model: {model_name} not recognized")
+    return model

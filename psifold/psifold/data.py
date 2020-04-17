@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, BatchSampler, RandomSampler, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_sequence
 
 class BucketByLenRandomBatchSampler(torch.utils.data.Sampler):
@@ -70,3 +70,32 @@ class ProteinNetDataset(Dataset):
         coords = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C"))
 
         return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords}
+
+def make_data_loader(dset, batch_size=32, max_len=None, max_size=None, bucket_size=None):
+    """
+    create a DataLoader for ProteinNet datasets
+
+    Args:
+        batch_size: approximate size of each batch (the last batch in the dset/bucket may be smaller)
+        max_len: only include proteins with sequence length <= max_len
+        max_size: only include first max_size elements of dataset
+        bucket_size: size of buckets used by BucketByLenRandomBatchSampler
+    """
+    if max_len:
+        assert max_len > 0
+        indices = [i for i, x in enumerate(dset) if x["seq"].numel() <= max_len]
+        dset = Subset(dset, indices)
+
+    if max_size:
+        assert max_size > 0
+        dset = Subset(dset, range(max_size))
+
+    if bucket_size:
+        lengths = torch.tensor([x["seq"].shape[0] for x in dset])
+        sampler = BucketByLenRandomBatchSampler(lengths, batch_size=batch_size, bucket_size=bucket_size)
+    else:
+        sampler = BatchSampler(RandomSampler(dset), batch_size=batch_size, drop_last=False)
+
+    data_loader = DataLoader(dset, batch_sampler=sampler, collate_fn=collate_fn)
+
+    return data_loader

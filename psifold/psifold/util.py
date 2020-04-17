@@ -3,7 +3,7 @@ import datetime
 import torch
 import torch.nn as nn
 
-from torchstruct import dRMSD
+from psifold import dRMSD
 
 def validate(model, val_dloader, device):
     model.eval()

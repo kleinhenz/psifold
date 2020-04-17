@@ -6,7 +6,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 import math
 
-from torchstruct import GeometricUnit
+from psifold import GeometricUnit
 
 class RGN(nn.Module):
     """

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 import math
 
-from torchstruct import GeometricUnit
+from psifold import GeometricUnit
 
 # from https://pytorch.org/tutorials/beginner/transformer_tutorial.html
 class PositionalEncoding(nn.Module):

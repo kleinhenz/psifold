@@ -11,7 +11,7 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 
-from torchstruct import ProteinNetDataset, collate_fn, BucketByLenRandomBatchSampler, train, validate, RGN, PsiFold
+from psifold import ProteinNetDataset, collate_fn, BucketByLenRandomBatchSampler, train, validate, RGN, PsiFold
 
 def main():
     parser = argparse.ArgumentParser(description="train RGN model")

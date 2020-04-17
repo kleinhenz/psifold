@@ -1,8 +1,7 @@
 import torch
-import torchstruct
 import torch.nn.functional as F
 
-from torchstruct import internal_coords, nerf_extend_multi, dRMSD
+from psifold import internal_coords, nerf_extend_multi, dRMSD
 
 def test_geometric_unit_RMSD():
     """test that internal_coords -> nerf_extend_multi is the identity

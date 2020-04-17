@@ -62,12 +62,10 @@ def main():
         model = make_model(args.model, model_args)
         optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
-    train_loss_history = []
-    val_loss_history = []
-
-    model.train()
     model.to(device)
 
+    train_loss_history = []
+    val_loss_history = []
     print("entering training loop...")
     for epoch in range(args.epochs):
         start = datetime.datetime.now()

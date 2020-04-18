@@ -48,6 +48,30 @@ def train(model, optimizer, train_dloader, device, output_frequency = 60):
 
     return train_loss
 
+def run_train_loop(model, optimizer, train_dloader, val_dloader, device, epochs=10, output_frequency=60, checkpoint_file="checkpoint.pt"):
+    train_loss_history = []
+    val_loss_history = []
+    for epoch in range(epochs):
+        start = datetime.datetime.now()
+        train_loss = train(model, optimizer, train_dloader, device, output_frequency=output_frequency)
+        val_loss = validate(model, val_dloader, device)
+        elapsed = datetime.datetime.now() - start
+        print(f"epoch {epoch:d}: elapsed = {elapsed}, train dRMSD (A) = {train_loss/100:0.3f}, val dRMSD (A) = {val_loss/100:0.3f}")
+
+        train_loss_history.append(train_loss)
+        val_loss_history.append(val_loss)
+
+        checkpoint = {
+            "model_name" : model.model_name,
+            "model_args" : model.model_args,
+            "epoch": epoch,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "train_loss_history": train_loss_history,
+            "val_loss_history" : val_loss_history
+            }
+        torch.save(checkpoint, checkpoint_file)
+
 def make_model(model_name, model_args):
     if model_name == "rgn":
         model = RGN(**model_args)

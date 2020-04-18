@@ -19,8 +19,13 @@ class RGN(nn.Module):
     """
     def __init__(self, hidden_size=64, linear_units=32, n_layers=2, dropout=0.1):
         super(RGN, self).__init__()
-        self.hidden_size = hidden_size
-        self.n_layers = n_layers
+
+        # save info needed to recreate model from checkpoint
+        self.model_name = "rgn"
+        self.model_args = {"hidden_size" : hidden_size,
+                           "linear_units" : linear_units,
+                           "n_layers": n_layers,
+                           "dropout": dropout}
 
         self.lstm = nn.LSTM(input_size=41,
                             hidden_size=hidden_size,

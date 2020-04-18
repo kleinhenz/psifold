@@ -11,14 +11,13 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 
-from psifold import ProteinNetDataset, make_data_loader, train, validate, make_model
+from psifold import ProteinNetDataset, make_data_loader, train, validate, make_model, run_train_loop
 
 def restore_from_checkpoint(checkpoint):
-    model = make_model(checkpoint["model"], checkpoint["model_args"])
+    model = make_model(checkpoint["model_name"], checkpoint["model_args"])
     model.load_state_dict(checkpoint["model_state_dict"])
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-
     return model, optimizer
 
 def main():
@@ -63,30 +62,14 @@ def main():
         optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     model.to(device)
-
-    train_loss_history = []
-    val_loss_history = []
-    print("entering training loop...")
-    for epoch in range(args.epochs):
-        start = datetime.datetime.now()
-        train_loss = train(model, optimizer, train_dloader, device, output_frequency = 10)
-        val_loss = validate(model, val_dloader, device)
-        elapsed = datetime.datetime.now() - start
-        print(f"epoch {epoch:d}: elapsed = {elapsed}, train dRMSD (A) = {train_loss/100:0.3f}, val dRMSD (A) = {val_loss/100:0.3f}")
-
-        train_loss_history.append(train_loss)
-        val_loss_history.append(val_loss)
-
-        checkpoint = {
-            "model" : args.model,
-            "model_args" : model_args,
-            "epoch": epoch,
-            "model_state_dict": model.state_dict(),
-            "optimizer_state_dict": optimizer.state_dict(),
-            "train_loss_history": train_loss_history,
-            "val_loss_history" : val_loss_history
-            }
-        torch.save(checkpoint, args.save_checkpoint)
+    run_train_loop(model,
+                   optimizer,
+                   train_dloader,
+                   val_dloader,
+                   device,
+                   epochs=args.epochs,
+                   output_frequency=60,
+                   checkpoint_file=args.save_checkpoint)
 
 if __name__ == "__main__":
     main()

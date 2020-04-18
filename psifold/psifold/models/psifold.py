@@ -30,8 +30,15 @@ class PsiFold(nn.Module):
     """
     def __init__(self, hidden_size=64, linear_units=32, n_layers=2, nhead=4, dim_feedforward=256, dropout=0.1):
         super(PsiFold, self).__init__()
-        self.hidden_size = hidden_size
-        self.n_layers = n_layers
+
+        # save info needed to recreate model from checkpoint
+        self.model_name = "psifold"
+        self.model_args = {"hidden_size" : hidden_size,
+                           "linear_units" : linear_units,
+                           "n_layers": n_layers,
+                           "nhead" : nhead,
+                           "dim_feedforward" : dim_feedforward,
+                           "dropout": dropout}
 
         self.fc = nn.Linear(41, hidden_size)
         self.pos_encoder = PositionalEncoding(hidden_size, dropout)

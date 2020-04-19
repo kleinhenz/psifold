@@ -43,6 +43,8 @@ def main():
     parser.add_argument("--psifold_dropout", default=0.5)
 
     args = parser.parse_args()
+    print("running psifold_train...")
+    print("args:", vars(args))
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

@@ -21,8 +21,8 @@ def main():
     parser.add_argument("--val.section", default="/validation", dest="val_section", help="hdf5 section containing validation set")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--train_size", type=int, default=-1)
-    parser.add_argument("--max_len", type=int, default=-1)
+    parser.add_argument("--train_size", type=int, default=None)
+    parser.add_argument("--max_len", type=int, default=None)
     parser.add_argument("--model", choices=["rgn", "psifold"], default="psifold")
     parser.add_argument("--learning_rate", type=float, default=1e-3)
     parser.add_argument("--save_checkpoint", type=str, default="checkpoint.pt")
@@ -53,7 +53,6 @@ def main():
                                      max_size=args.train_size,
                                      batch_size=args.batch_size,
                                      bucket_size=32*args.batch_size)
-
     val_dset = ProteinNetDataset(args.input_file, args.val_section)
     val_dset_groups = group_by_class(val_dset)
     val_dloader_dict = {k : make_data_loader(v, batch_size=args.batch_size) for k, v in val_dset_groups.items()}

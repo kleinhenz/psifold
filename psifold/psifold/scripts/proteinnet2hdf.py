@@ -3,7 +3,6 @@
 import pathlib
 import argparse
 
-import tensorflow as tf
 import numpy as np
 import h5py
 
@@ -77,4 +76,5 @@ def main():
             dset[:] = data
 
 if __name__ == "__main__":
+    import tensorflow as tf
     main()

@@ -12,16 +12,7 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 
-from psifold import ProteinNetDataset, make_data_loader, group_by_class, train, validate, make_model, run_train_loop
-
-def restore_from_checkpoint(checkpoint):
-    model = make_model(checkpoint["model_name"], checkpoint["model_args"])
-    model.load_state_dict(checkpoint["model_state_dict"])
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    val_loss = checkpoint["val_loss"]
-
-    return model, optimizer, val_loss
+from psifold import ProteinNetDataset, make_data_loader, group_by_class, make_model, restore_from_checkpoint, run_train_loop
 
 def main():
     parser = argparse.ArgumentParser(description="train RGN model")
@@ -36,6 +27,21 @@ def main():
     parser.add_argument("--learning_rate", type=float, default=1e-3)
     parser.add_argument("--save_checkpoint", type=str, default="checkpoint.pt")
     parser.add_argument("--load_checkpoint", type=str, default="")
+
+    # rgn parameters
+    parser.add_argument("--rgn_hidden_size", default=64)
+    parser.add_argument("--rgn_linear_units", default=32)
+    parser.add_argument("--rgn_n_layers", default=2)
+    parser.add_argument("--rgn_dropout", default=0.5)
+
+    # psifold argument
+    parser.add_argument("--psifold_hidden_size", default=64)
+    parser.add_argument("--psifold_linear_units", default=32)
+    parser.add_argument("--psifold_n_layers", default=2)
+    parser.add_argument("--psifold_nhead", default=4)
+    parser.add_argument("--psifold_dim_feedforward", default=256)
+    parser.add_argument("--psifold_dropout", default=0.5)
+
     args = parser.parse_args()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -52,11 +58,10 @@ def main():
     val_dset_groups = group_by_class(val_dset)
     val_dloader_dict = {k : make_data_loader(v, batch_size=args.batch_size) for k, v in val_dset_groups.items()}
 
-    # TODO get these from command line
     if args.model == "rgn":
-        model_args = {"hidden_size" : 64, "linear_units" : 32, "n_layers" : 2, "dropout" : 0.1}
+        model_args = {"hidden_size" : args.rgn_hidden_size, "linear_units" : args.rgn_linear_units, "n_layers" : args.rgn_n_layers, "dropout" : args.rgn_dropout}
     elif args.model == "psifold":
-        model_args = {"hidden_size" : 64, "linear_units" : 32, "n_layers" : 2, "nhead" : 4, "dim_feedforward" : 256, "dropout" : 0.1}
+        model_args = {"hidden_size" : args.psifold_hidden_size, "linear_units" : args.psifold_linear_units, "n_layers" : args.psifold_n_layers, "nhead" : args.psifold_nhead, "dim_feedforward" : args.psifold_dim_feedforward, "dropout" : args.psifold_dropout}
 
     if args.load_checkpoint:
         print(f"restoring state from {args.load_checkpoint}")

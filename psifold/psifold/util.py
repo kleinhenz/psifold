@@ -20,6 +20,14 @@ def make_model(model_name, model_args):
         raise Exception(f"model: {model_name} not recognized")
     return model
 
+def restore_from_checkpoint(checkpoint):
+    model = make_model(checkpoint["model_name"], checkpoint["model_args"])
+    model.load_state_dict(checkpoint["model_state_dict"])
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    val_loss = checkpoint["val_loss"]
+    return model, optimizer, val_loss
+
 def validate(model, val_dloader_dict, device):
     model.eval()
     val_loss = 0.0

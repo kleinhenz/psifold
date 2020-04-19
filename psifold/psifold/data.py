@@ -1,3 +1,5 @@
+import re
+
 import h5py
 import numpy as np
 
@@ -45,6 +47,8 @@ def collate_fn(batch):
 # TODO extract class info (FM/TBM for test set, % seq id for validation set) from id field
 class ProteinNetDataset(Dataset):
     def __init__(self, fname, section):
+        self.class_re = re.compile("(.*)#")
+
         with h5py.File(fname, "r") as h5f:
             self.dset = h5f[section][:]
 
@@ -69,7 +73,13 @@ class ProteinNetDataset(Dataset):
         # tertiary structure (3N x 3)
         coords = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C"))
 
-        return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords}
+        out = {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords}
+
+        # extract class from id if present
+        class_match = self.class_re.match(ID)
+        if class_match: out["class"] = class_match[1]
+
+        return out
 
 def make_data_loader(dset, batch_size=32, max_len=None, max_size=None, bucket_size=None):
     """

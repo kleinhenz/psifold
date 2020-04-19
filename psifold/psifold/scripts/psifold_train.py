@@ -14,6 +14,9 @@ import matplotlib.pyplot as plt
 
 from psifold import ProteinNetDataset, make_data_loader, group_by_class, make_model, restore_from_checkpoint, run_train_loop
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 def main():
     parser = argparse.ArgumentParser(description="train RGN model")
     parser.add_argument("--input.file", default="input.h5", dest="input_file", help="hdf5 file containing proteinnet records")
@@ -29,18 +32,18 @@ def main():
     parser.add_argument("--load_checkpoint", type=str, default="")
 
     # rgn parameters
-    parser.add_argument("--rgn_hidden_size", default=64)
-    parser.add_argument("--rgn_linear_units", default=32)
-    parser.add_argument("--rgn_n_layers", default=2)
-    parser.add_argument("--rgn_dropout", default=0.5)
+    parser.add_argument("--rgn_hidden_size", type=int, default=64)
+    parser.add_argument("--rgn_linear_units", type=int, default=32)
+    parser.add_argument("--rgn_n_layers", type=int, default=2)
+    parser.add_argument("--rgn_dropout", type=float, default=0.5)
 
     # psifold argument
-    parser.add_argument("--psifold_hidden_size", default=64)
-    parser.add_argument("--psifold_linear_units", default=32)
-    parser.add_argument("--psifold_n_layers", default=2)
-    parser.add_argument("--psifold_nhead", default=4)
-    parser.add_argument("--psifold_dim_feedforward", default=256)
-    parser.add_argument("--psifold_dropout", default=0.5)
+    parser.add_argument("--psifold_hidden_size", type=int, default=64)
+    parser.add_argument("--psifold_linear_units", type=int, default=32)
+    parser.add_argument("--psifold_n_layers", type=int, default=2)
+    parser.add_argument("--psifold_nhead", type=int, default=4)
+    parser.add_argument("--psifold_dim_feedforward", type=int, default=256)
+    parser.add_argument("--psifold_dropout", type=float, default=0.5)
 
     args = parser.parse_args()
     print("running psifold_train...")
@@ -76,6 +79,9 @@ def main():
         best_val_loss = math.inf
 
     model.to(device)
+
+    n_params = count_parameters(model)
+    print(f"n_params = {n_params}")
 
     print("entering training loop...")
     model = run_train_loop(model,

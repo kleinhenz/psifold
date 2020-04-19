@@ -2,6 +2,7 @@
 
 import argparse
 import datetime
+import math
 
 import torch
 from torch import nn, optim
@@ -11,14 +12,16 @@ import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 
-from psifold import ProteinNetDataset, make_data_loader, train, validate, make_model, run_train_loop
+from psifold import ProteinNetDataset, make_data_loader, group_by_class, train, validate, make_model, run_train_loop
 
 def restore_from_checkpoint(checkpoint):
     model = make_model(checkpoint["model_name"], checkpoint["model_args"])
     model.load_state_dict(checkpoint["model_state_dict"])
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    return model, optimizer
+    val_loss = checkpoint["val_loss"]
+
+    return model, optimizer, val_loss
 
 def main():
     parser = argparse.ArgumentParser(description="train RGN model")
@@ -30,6 +33,7 @@ def main():
     parser.add_argument("--train_size", type=int, default=-1)
     parser.add_argument("--max_len", type=int, default=-1)
     parser.add_argument("--model", choices=["rgn", "psifold"], default="psifold")
+    parser.add_argument("--learning_rate", type=float, default=1e-3)
     parser.add_argument("--save_checkpoint", type=str, default="checkpoint.pt")
     parser.add_argument("--load_checkpoint", type=str, default="")
     args = parser.parse_args()
@@ -45,7 +49,8 @@ def main():
                                      bucket_size=32*args.batch_size)
 
     val_dset = ProteinNetDataset(args.input_file, args.val_section)
-    val_dloader = make_data_loader(val_dset)
+    val_dset_groups = group_by_class(val_dset)
+    val_dloader_dict = {k : make_data_loader(v, batch_size=args.batch_size) for k, v in val_dset_groups.items()}
 
     # TODO get these from command line
     if args.model == "rgn":
@@ -56,20 +61,24 @@ def main():
     if args.load_checkpoint:
         print(f"restoring state from {args.load_checkpoint}")
         checkpoint = torch.load(args.load_checkpoint)
-        model, optimizer = restore_from_checkpoint(checkpoint)
+        model, optimizer, best_val_loss = restore_from_checkpoint(checkpoint)
     else:
         model = make_model(args.model, model_args)
-        optimizer = optim.Adam(model.parameters(), lr=1e-3)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+        best_val_loss = math.inf
 
     model.to(device)
-    run_train_loop(model,
-                   optimizer,
-                   train_dloader,
-                   val_dloader,
-                   device,
-                   epochs=args.epochs,
-                   output_frequency=60,
-                   checkpoint_file=args.save_checkpoint)
+
+    print("entering training loop...")
+    model = run_train_loop(model,
+                           optimizer,
+                           train_dloader,
+                           val_dloader_dict,
+                           device,
+                           epochs=args.epochs,
+                           output_frequency=60,
+                           checkpoint_file=args.save_checkpoint,
+                           best_val_loss=best_val_loss)
 
 if __name__ == "__main__":
     main()

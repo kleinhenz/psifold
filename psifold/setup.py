@@ -5,4 +5,8 @@ setup(
     packages=find_packages(),
     install_requires=["numpy", "h5py", "matplotlib", "torch"],
     python_requires="~=3.6",
+    entry_points = {
+        "console_scripts" : ["psifold_train=psifold.scripts.psifold_train:main",
+                             "proteinnet2hdf=psifold.scripts.proteinnet2hdf:main"]
+        }
 )

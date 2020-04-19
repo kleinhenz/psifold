@@ -109,3 +109,8 @@ def make_data_loader(dset, batch_size=32, max_len=None, max_size=None, bucket_si
     data_loader = DataLoader(dset, batch_sampler=sampler, collate_fn=collate_fn)
 
     return data_loader
+
+def group_by_class(dset):
+    classes = np.array([x["class"] for x in dset])
+    out = {c : Subset(dset, np.nonzero(classes == c)[0]) for c in np.unique(classes)}
+    return out

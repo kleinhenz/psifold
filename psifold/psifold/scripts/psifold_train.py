@@ -47,6 +47,8 @@ def main():
     print("args:", vars(args))
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(device)
+    if torch.cuda.is_available(): print(torch.cuda.get_device_name())
 
     print("loading data...")
     train_dset = ProteinNetDataset(args.input_file, args.train_section)

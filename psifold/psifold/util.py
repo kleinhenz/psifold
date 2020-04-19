@@ -3,7 +3,7 @@ import datetime
 import math
 
 import torch
-import torch.nn as nn
+from torch import nn, optim
 
 from psifold import dRMSD, RGN, PsiFold
 

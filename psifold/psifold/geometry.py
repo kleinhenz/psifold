@@ -235,6 +235,7 @@ def nerf(c_tilde):
 
     return coords
 
+# TODO backward pass with nfrag > 1 generates nans
 def pnerf(c_tilde, nfrag):
     """Compute cartesian coordinates from SRF coordinates
 
@@ -327,6 +328,6 @@ class GeometricUnit(nn.Module):
         c_tilde = torsion_to_srf(self.bond_lengths, self.bond_angles, phi)
 
         # (3L, B, 3)
-        coords = pnerf(c_tilde, nfrag=1)
+        coords = nerf(c_tilde)
 
         return coords

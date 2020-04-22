@@ -229,7 +229,16 @@ def nerf(c_tilde):
         coords: (L, B, 3)
     """
     L, B, _ = c_tilde.size()
-    init_coords = torch.eye(3, dtype=c_tilde.dtype, device=c_tilde.device).unsqueeze(1).repeat(1, B, 1)
+    #initialization coordinates
+    c0 = torch.tensor([-math.sqrt(1.0/2.0), math.sqrt(3.0/2.0), 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
+    c1 = torch.tensor([-math.sqrt(2.0), 0.0, 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
+    c2 = torch.tensor([0.0, 0.0, 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
+
+    #(3, D)
+    init_coords = torch.stack([c0, c1, c2])
+
+    #(3, B, D)
+    init_coords = init_coords.view(3, 1, 3).repeat(1, B, 1)
 
     coords = nerf_extend(init_coords, c_tilde)
 

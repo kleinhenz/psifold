@@ -258,12 +258,12 @@ def pnerf(c_tilde, nfrag):
     c_tilde = c_tilde.permute(1, 0, 2, 3)
 
     #initialization coordinates
-    c0 = torch.tensor([-math.sqrt(1.0/2.0), math.sqrt(3.0/2.0), 0.0])
-    c1 = torch.tensor([-math.sqrt(2.0), 0.0, 0.0])
-    c2 = torch.tensor([0.0, 0.0, 0.0])
+    c0 = torch.tensor([-math.sqrt(1.0/2.0), math.sqrt(3.0/2.0), 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
+    c1 = torch.tensor([-math.sqrt(2.0), 0.0, 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
+    c2 = torch.tensor([0.0, 0.0, 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
 
     #(3, D)
-    init_coords = torch.stack([c0, c1, c2]).to(c_tilde.dtype)
+    init_coords = torch.stack([c0, c1, c2])
 
     #(3, F, B, D)
     init_coords = init_coords.view(3, 1, 1, 3).repeat(1, nfrag, B, 1)

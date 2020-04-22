@@ -309,7 +309,7 @@ def pnerf(c_tilde, nfrag):
 class GeometricUnit(nn.Module):
     """input -> torsion angles -> cartesian coords"""
 
-    def __init__(self, input_size, linear_units = 20):
+    def __init__(self, input_size, linear_units = 20, nfrag=7):
         super(GeometricUnit, self).__init__()
 
         self.linear = nn.Linear(input_size, linear_units)
@@ -322,6 +322,8 @@ class GeometricUnit(nn.Module):
         self.bond_lengths = nn.Parameter(torch.tensor([132.868, 145.801, 152.326]))
         # [CA-C-N, C-N-CA, N-CA-C]
         self.bond_angles = nn.Parameter(torch.tensor([2.028, 2.124, 1.941]))
+
+        self.register_buffer("nfrag", torch.tensor([nfrag], dtype=torch.int))
 
     def forward(self, inp):
         L, B = inp.size(0), inp.size(1)
@@ -340,6 +342,6 @@ class GeometricUnit(nn.Module):
         c_tilde = torsion_to_srf(self.bond_lengths, self.bond_angles, phi)
 
         # (3L, B, 3)
-        coords = nerf(c_tilde)
+        coords = pnerf(c_tilde, nfrag=self.nfrag.item())
 
         return coords

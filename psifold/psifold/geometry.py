@@ -212,7 +212,7 @@ def nerf_extend(init_coords, c_tilde):
     A, B, C = init_coords[-3], init_coords[-2], init_coords[-1]
     for i in range(L):
         R = nerf_rot(A, B, C)
-        D = C + torch.matmul(R, c_tilde[i].unsqueeze(-1)).squeeze()
+        D = C + torch.matmul(R, c_tilde[i].unsqueeze(-1)).squeeze(-1)
         coords += [D]
         A, B, C = B, C, D
 
@@ -300,7 +300,7 @@ def pnerf(c_tilde, nfrag):
         coords_align = coords_align.unsqueeze(-1)
 
         # (L'', B, D)
-        coords_align = torch.matmul(R, coords_align).squeeze() + C
+        coords_align = torch.matmul(R, coords_align).squeeze(-1) + C
 
         coords_align = torch.cat((coords[i], coords_align), dim=0)
 

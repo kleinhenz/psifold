@@ -327,6 +327,6 @@ class GeometricUnit(nn.Module):
         c_tilde = torsion_to_srf(self.bond_lengths, self.bond_angles, phi)
 
         # (3L, B, 3)
-        coords = pnerf(c_tilde, nfrag=6)
+        coords = pnerf(c_tilde, nfrag=1)
 
         return coords

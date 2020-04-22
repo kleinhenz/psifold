@@ -9,19 +9,14 @@ import torch
 import psifold
 from psifold import pnerf, internal_coords, internal_to_srf, dRMSD
 
-def main():
+def run(length, batch_size, device, sigma=1e-3, lr=1e-4):
     """
     test that backpropagation through pnerf and dRMSD works
     """
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    batch_size = 8
-    coords = torch.rand(64, batch_size, 3)
+    coords = torch.rand(length, batch_size, 3)
     coords = coords.to(device)
     r, theta, phi = internal_coords(coords, pad=True)
-
-    sigma = 1e-3
 
     r = r + sigma * torch.randn_like(r)
     theta = theta + sigma * torch.randn_like(theta)
@@ -31,7 +26,7 @@ def main():
     theta.requires_grad = True
     phi.requires_grad = True
 
-    optimizer = torch.optim.Adam([r, theta, phi], lr=1e-4)
+    optimizer = torch.optim.Adam([r, theta, phi], lr=lr)
 
     loss_history = []
     epochs = 250
@@ -53,6 +48,12 @@ def main():
     ax.set_xlabel("iter")
     ax.set_ylabel("dRMSD")
     plt.show()
+
+def main():
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    length = 64
+    batch_size = 8
+    run(length, batch_size, device)
 
 if __name__ == "__main__":
     main()

@@ -260,7 +260,10 @@ def pnerf(c_tilde, nfrag):
     # frag_len = ceil(L / nfrags)
     frag_len = (L + nfrag - 1) // nfrag
     padding = frag_len * nfrag - L
-    c_tilde = F.pad(c_tilde, [0, 0, 0, 0, 0, padding])
+
+    # NOTE we can't pad with zero otherwise backward gives nan
+    # also see https://github.com/pytorch/pytorch/issues/31734 (fixed in pytorch 1.5)
+    c_tilde = F.pad(c_tilde, [0, 0, 0, 0, 0, padding], value=0.1)
     assert c_tilde.size(0) % nfrag == 0
 
     #(L',F, B, D)

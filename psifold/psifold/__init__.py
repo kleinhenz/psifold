@@ -8,3 +8,4 @@ from . import geometry
 from . import models
 from . import util
 from . import scripts
+from . import test

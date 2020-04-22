@@ -5,7 +5,7 @@ import math
 import torch
 from torch import nn, optim
 
-from psifold import dRMSD, RGN, PsiFold
+from psifold import dRMSD_masked, RGN, PsiFold
 
 def to_device(batch, device):
     for k in ["seq", "pssm", "length", "coords", "mask"]:
@@ -40,7 +40,7 @@ def validate(model, val_dloader_dict, device):
             for batch in dloader:
                 to_device(batch, device)
                 out = model(batch["seq"], batch["pssm"], batch["length"])
-                loss = dRMSD(out, batch["coords"], batch["mask"])
+                loss = dRMSD_masked(out, batch["coords"], batch["mask"])
 
                 val_loss += loss.item()
                 val_loss_group += loss.item()
@@ -61,11 +61,11 @@ def train(model, optimizer, train_dloader, device, output_frequency = 60):
         to_device(batch, device)
         out = model(batch["seq"], batch["pssm"], batch["length"])
         optimizer.zero_grad()
-        loss = dRMSD(out, batch["coords"], batch["mask"])
+        loss = dRMSD_masked(out, batch["coords"], batch["mask"])
         loss.backward()
 
         nn.utils.clip_grad_norm_(model.parameters(), max_norm=50.0)
-        train_loss += loss.data
+        train_loss += loss.item()
         optimizer.step()
 
         if ((datetime.datetime.now() - last_output).seconds > output_frequency):

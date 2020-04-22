@@ -1,5 +1,5 @@
 from .data import ProteinNetDataset, make_data_loader, group_by_class
-from .geometry import dRMSD, internal_coords, nerf_extend_single, nerf_extend_multi, GeometricUnit
+from .geometry import dRMSD, dRMSD_masked, internal_coords, internal_to_srf, nerf, pnerf, GeometricUnit
 from .models import RGN, PsiFold
 from .util import make_model, run_train_loop, restore_from_checkpoint
 

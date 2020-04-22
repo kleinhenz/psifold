@@ -44,7 +44,6 @@ def collate_fn(batch):
 
     return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords, "length" : sorted_length}
 
-# TODO extract class info (FM/TBM for test set, % seq id for validation set) from id field
 class ProteinNetDataset(Dataset):
     def __init__(self, fname, section):
         self.class_re = re.compile("(.*)#")

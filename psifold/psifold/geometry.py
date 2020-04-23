@@ -244,7 +244,6 @@ def nerf(c_tilde):
 
     return coords
 
-# TODO backward pass with nfrag > 1 generates nans
 def pnerf(c_tilde, nfrag):
     """Compute cartesian coordinates from SRF coordinates
 

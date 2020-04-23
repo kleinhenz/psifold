@@ -17,6 +17,7 @@ def create_hdf5_dtype():
     return dtype
 
 def parse_record(proto):
+    import tensorflow as tf
     context_features={'id': tf.io.FixedLenFeature((1,), tf.string)}
     sequence_features={
                         'primary':      tf.io.FixedLenSequenceFeature((1,),               tf.int64),
@@ -31,6 +32,7 @@ def parse_record(proto):
     return context, features
 
 def read_tf(files):
+    import tensorflow as tf
     dset = tf.data.TFRecordDataset(files)
     dset_parsed = dset.map(parse_record)
 
@@ -76,5 +78,4 @@ def main():
             dset[:] = data
 
 if __name__ == "__main__":
-    import tensorflow as tf
     main()

@@ -9,7 +9,7 @@ import torch
 import psifold
 from psifold import pnerf, internal_coords, internal_to_srf, dRMSD
 
-def run(length, batch_size, device, sigma=1e-3, lr=1e-4):
+def run(length, batch_size, device, epochs=250, sigma=1e-3, lr=1e-4):
     """
     test that backpropagation through pnerf and dRMSD works
     """
@@ -29,7 +29,6 @@ def run(length, batch_size, device, sigma=1e-3, lr=1e-4):
     optimizer = torch.optim.Adam([r, theta, phi], lr=lr)
 
     loss_history = []
-    epochs = 250
     for epoch in tqdm(range(epochs)):
         c_tilde = internal_to_srf(r, theta, phi)
         coords_ = pnerf(c_tilde, nfrag=7)

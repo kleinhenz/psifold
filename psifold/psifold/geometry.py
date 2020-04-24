@@ -167,6 +167,26 @@ def torsion_to_srf(r, theta, phi):
     c_tilde = c_tilde.contiguous().view(3*L,B,3)
     return c_tilde
 
+def collect_geometry(dset):
+    bond_lengths = {"n_ca" : [], "ca_c" : [], "c_n" : []}
+    bond_angles = {"n_ca_c" : [], "ca_c_n" : [], "c_n_ca" : []}
+    bond_torsions = {"n_ca_c_n" : [], "ca_c_n_ca": [], "c_n_ca_c" : []}
+
+    for example in dset:
+        assert example["mask"].all()
+        coords = example["coords"].view(-1, 1, 3)
+        r, theta, phi = internal_coords(coords)
+        for i, (x, y, z) in enumerate(zip(bond_lengths, bond_angles, bond_torsions)):
+            bond_lengths[x].append(r[i::3].squeeze())
+            bond_angles[y].append(theta[i::3].squeeze())
+            bond_torsions[z].append(phi[i::3].squeeze())
+
+    for x in [bond_lengths, bond_angles, bond_torsions]:
+        for k,v in x.items():
+            x[k] = torch.cat(v)
+
+    return bond_lengths, bond_angles, bond_torsions
+
 @torch.jit.script
 def nerf_rot(A, B, C):
     """Compute nerf rotation matrix from previous three coordinates

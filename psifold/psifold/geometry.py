@@ -337,10 +337,12 @@ class GeometricUnit(nn.Module):
         u = torch.distributions.Uniform(-math.pi, math.pi)
         self.alphabet = nn.Parameter(u.rsample(torch.Size([linear_units, 3])))
 
-        # [C-N, N-CA, CA-C]
-        self.bond_lengths = nn.Parameter(torch.tensor([132.868, 145.801, 152.326]))
-        # [CA-C-N, C-N-CA, N-CA-C]
-        self.bond_angles = nn.Parameter(torch.tensor([2.028, 2.124, 1.941]))
+        # (N-CA, CA-C, C-N)
+        self.bond_lengths = nn.Parameter(torch.tensor([145.867432,152.534744,132.935516]))
+
+        # (C-N-CA, N-CA-C, CA-C-N)
+        # NOTE values from original rgn code given by pi - self.bond_angles
+        self.bond_angles = nn.Parameter(torch.tensor([1.019982,1.204710,1.109421]))
 
         self.register_buffer("nfrag", torch.tensor([nfrag], dtype=torch.int))
 

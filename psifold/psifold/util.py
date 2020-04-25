@@ -52,7 +52,7 @@ def validate(model, val_dloader_dict, device):
 
     return val_loss, val_loss_by_group
 
-def train(model, optimizer, train_dloader, device, output_frequency = 60):
+def train(model, optimizer, train_dloader, device, max_grad_norm=None, output_frequency = 60):
     model.train()
     train_loss = 0.0
 
@@ -64,7 +64,8 @@ def train(model, optimizer, train_dloader, device, output_frequency = 60):
         loss = dRMSD_masked(out, batch["coords"], batch["mask"])
         loss.backward()
 
-        nn.utils.clip_grad_norm_(model.parameters(), max_norm=50.0)
+        if max_grad_norm: nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
+
         train_loss += loss.item()
         optimizer.step()
 
@@ -76,12 +77,12 @@ def train(model, optimizer, train_dloader, device, output_frequency = 60):
 
     return train_loss
 
-def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device, epochs=10, output_frequency=60, checkpoint_file="checkpoint.pt", best_val_loss=math.inf):
+def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device, max_grad_norm=None, epochs=10, output_frequency=60, checkpoint_file="checkpoint.pt", best_val_loss=math.inf):
     best_model_state_dict = copy.deepcopy(model.state_dict())
 
     for epoch in range(epochs):
         start = datetime.datetime.now()
-        train_loss = train(model, optimizer, train_dloader, device, output_frequency=output_frequency)
+        train_loss = train(model, optimizer, train_dloader, device, max_grad_norm=max_grad_norm, output_frequency=output_frequency)
         val_loss, val_loss_by_group = validate(model, val_dloader_dict, device)
         elapsed = datetime.datetime.now() - start
         print(f"epoch {epoch:d}: elapsed = {elapsed}, train dRMSD (A) = {train_loss/100:0.3f}, val dRMSD (A) = {val_loss/100:0.3f}")

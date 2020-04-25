@@ -22,13 +22,17 @@ def main():
     parser.add_argument("--train.section", default="/training/90", dest="train_section", help="hdf5 section containing training set")
     parser.add_argument("--val.section", default="/validation", dest="val_section", help="hdf5 section containing validation set")
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--train_size", type=int, default=None)
     parser.add_argument("--max_len", type=int, default=None)
-    parser.add_argument("--model", choices=["rgn", "psifold"], default="psifold")
+
+    parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--learning_rate", type=float, default=1e-3)
+    parser.add_argument("--max_grad_norm", type=float, default=None)
+
     parser.add_argument("--save_checkpoint", type=str, default="checkpoint.pt")
     parser.add_argument("--load_checkpoint", type=str, default="")
+
+    parser.add_argument("--model", choices=["rgn", "psifold"], default="psifold")
 
     # rgn parameters
     parser.add_argument("--rgn_hidden_size", type=int, default=64)
@@ -87,6 +91,7 @@ def main():
                            train_dloader,
                            val_dloader_dict,
                            device,
+                           max_grad_norm=args.max_grad_norm,
                            epochs=args.epochs,
                            output_frequency=60,
                            checkpoint_file=args.save_checkpoint,

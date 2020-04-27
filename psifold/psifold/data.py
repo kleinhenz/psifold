@@ -62,6 +62,7 @@ class ProteinNetDataset(Dataset):
 
         # primary amino acid sequence (N)
         seq = torch.from_numpy(record["primary"])
+        N = seq.size()
 
         # PSSM + information content (N x 21)
         pssm = torch.from_numpy(np.reshape(record["evolutionary"], (-1, 21), "C"))
@@ -71,6 +72,10 @@ class ProteinNetDataset(Dataset):
 
         # tertiary structure (3N x 3)
         coords = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C"))
+
+        # alpha carbon only
+        if coords[0::3].eq(0).all() and coords[2::3].eq(0).all():
+            mask = torch.logical_and(mask, torch.tensor([False, True, False]).repeat(N))
 
         out = {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords}
 

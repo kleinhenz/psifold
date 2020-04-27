@@ -1,15 +1,10 @@
 #!/usr/bin/env python
 
 import argparse
-import datetime
 import math
 
 import torch
 from torch import nn, optim
-
-import numpy as np
-import h5py
-import matplotlib.pyplot as plt
 
 from psifold import ProteinNetDataset, make_data_loader, group_by_class, make_model, restore_from_checkpoint, run_train_loop
 

@@ -7,6 +7,7 @@ setup(
     python_requires="~=3.6",
     entry_points = {
         "console_scripts" : ["psifold_train=psifold.scripts.psifold_train:main",
+                             "psifold_test=psifold.scripts.psifold_test:main",
                              "proteinnet2hdf=psifold.scripts.proteinnet2hdf:main"]
         }
 )

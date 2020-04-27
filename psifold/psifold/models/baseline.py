@@ -14,7 +14,7 @@ class Baseline(nn.Module):
         super(Baseline, self).__init__()
 
         # save info needed to recreate model from checkpoint
-        self.model_name = "psifold"
+        self.model_name = "baseline"
         self.model_args = {"hidden_size" : hidden_size,
                            "linear_units" : linear_units,
                            "n_layers": n_layers,

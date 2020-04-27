@@ -60,10 +60,16 @@ class PsiFold(nn.Module):
         # (L x B x 20)
         seq = F.one_hot(seq, 20).type(pssm.dtype)
 
+        # (L x B x 41)
         encoder_in = torch.cat((seq, pssm), dim=2)
+
+        # (L x B x hidden_size)
         encoder_in = self.fc(encoder_in)
+
+        # (L x B x hidden_size)
         encoder_in = self.pos_encoder(encoder_in)
 
+        # (L x B)
         mask = torch.arange(L, device=seq.device).expand(B, L) >= length.unsqueeze(1)
 
         # (L x B x hidden_size)

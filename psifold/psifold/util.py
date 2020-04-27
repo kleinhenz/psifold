@@ -5,7 +5,7 @@ import math
 import torch
 from torch import nn, optim
 
-from psifold import dRMSD_masked, RGN, PsiFold
+from psifold import dRMSD_masked, RGN, PsiFold, Baseline
 
 def to_device(batch, device):
     for k in ["seq", "pssm", "length", "coords", "mask"]:
@@ -16,6 +16,8 @@ def make_model(model_name, model_args):
         model = RGN(**model_args)
     elif model_name == "psifold":
         model = PsiFold(**model_args)
+    elif model_name == "baseline":
+        model = Baseline(**model_args)
     else:
         raise Exception(f"model: {model_name} not recognized")
     return model

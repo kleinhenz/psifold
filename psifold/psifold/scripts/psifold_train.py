@@ -32,7 +32,7 @@ def main():
     parser.add_argument("--save_checkpoint", type=str, default="checkpoint.pt")
     parser.add_argument("--load_checkpoint", type=str, default="")
 
-    parser.add_argument("--model", choices=["rgn", "psifold"], default="psifold")
+    parser.add_argument("--model", choices=["rgn", "psifold", "baseline"], default="psifold")
 
     # rgn parameters
     parser.add_argument("--rgn_hidden_size", type=int, default=64)
@@ -47,6 +47,11 @@ def main():
     parser.add_argument("--psifold_nhead", type=int, default=4)
     parser.add_argument("--psifold_dim_feedforward", type=int, default=256)
     parser.add_argument("--psifold_dropout", type=float, default=0.5)
+
+    parser.add_argument("--baseline_hidden_size", type=int, default=64)
+    parser.add_argument("--baseline_linear_units", type=int, default=32)
+    parser.add_argument("--baseline_n_layers", type=int, default=2)
+    parser.add_argument("--baseline_dropout", type=float, default=0.5)
 
     args = parser.parse_args()
     print("running psifold_train...")
@@ -71,6 +76,8 @@ def main():
         model_args = {"hidden_size" : args.rgn_hidden_size, "linear_units" : args.rgn_linear_units, "n_layers" : args.rgn_n_layers, "dropout" : args.rgn_dropout}
     elif args.model == "psifold":
         model_args = {"hidden_size" : args.psifold_hidden_size, "linear_units" : args.psifold_linear_units, "n_layers" : args.psifold_n_layers, "nhead" : args.psifold_nhead, "dim_feedforward" : args.psifold_dim_feedforward, "dropout" : args.psifold_dropout}
+    elif args.model == "baseline":
+        model_args = {"hidden_size" : args.baseline_hidden_size, "linear_units" : args.baseline_linear_units, "n_layers" : args.baseline_n_layers, "dropout" : args.baseline_dropout}
 
     if args.load_checkpoint:
         print(f"restoring state from {args.load_checkpoint}")

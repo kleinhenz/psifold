@@ -3,9 +3,27 @@ import re
 import h5py
 import numpy as np
 
+from tqdm import tqdm
+
 import torch
 from torch.utils.data import Dataset, DataLoader, BatchSampler, RandomSampler, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_sequence
+
+def seq2kmer(seq):
+    k, c = 3, 22 # only 3-mers for now
+    basis = torch.tensor([c]).repeat(k).pow(torch.arange(k))
+    seq_pad = torch.cat([torch.tensor([20]), seq, torch.tensor([21])]) # (add padding tokens)
+    kmer = torch.tensor([torch.dot(seq_pad[i:i+3], basis) for i in range(seq.size(0))])
+    return kmer
+
+def kmer2aa(kmer, k=3, c=22):
+    basis = torch.tensor([c]).repeat(k).pow(torch.arange(k))
+    aa = torch.zeros_like(basis)
+    for i in reversed(range(k)):
+        q, r = divmod(kmer, basis[i].item())
+        aa[i] = q
+        kmer = r
+    return aa
 
 class BucketByLenRandomBatchSampler(torch.utils.data.Sampler):
     """
@@ -38,6 +56,7 @@ def collate_fn(batch):
 
     ID = [batch[i]["id"] for i in sorted_indices]
     seq = pad_sequence([batch[i]["seq"] for i in sorted_indices])
+    kmer = pad_sequence([batch[i]["kmer"] for i in sorted_indices])
     pssm = pad_sequence([batch[i]["pssm"] for i in sorted_indices])
     mask = pad_sequence([batch[i]["mask"] for i in sorted_indices])
     coords = pad_sequence([batch[i]["coords"] for i in sorted_indices])
@@ -45,24 +64,32 @@ def collate_fn(batch):
     return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords, "length" : sorted_length}
 
 class ProteinNetDataset(Dataset):
-    def __init__(self, fname, section):
+    def __init__(self, fname, section, verbose=True):
         self.class_re = re.compile("(.*)#")
 
         with h5py.File(fname, "r") as h5f:
-            self.dset = h5f[section][:]
+            h5dset = h5f[section][:]
+
+        N = len(h5dset)
+        r = tqdm(range(N)) if verbose else range(N)
+        self.dset = [self.read_record(h5dset[i]) for i in r]
 
     def __len__(self):
         return len(self.dset)
 
     def __getitem__(self, idx):
-        record = self.dset[idx]
+        return self.dset[idx]
 
+    def read_record(self, record):
         # identifier
         ID = record["id"]
 
         # primary amino acid sequence (N)
         seq = torch.from_numpy(record["primary"])
-        N = seq.size()
+        N = seq.size(0)
+
+        # construct 3-mers
+        kmer = seq2kmer(seq)
 
         # PSSM + information content (N x 21)
         pssm = torch.from_numpy(np.reshape(record["evolutionary"], (-1, 21), "C"))
@@ -77,7 +104,7 @@ class ProteinNetDataset(Dataset):
         if coords[0::3].eq(0).all() and coords[2::3].eq(0).all():
             mask = torch.logical_and(mask, torch.tensor([False, True, False]).repeat(N))
 
-        out = {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords}
+        out = {"id" : ID, "seq" : seq, "kmer" : kmer, "pssm" : pssm, "mask" : mask, "coords" : coords}
 
         # extract class from id if present
         class_match = self.class_re.match(ID)

@@ -3,30 +3,63 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
+def _procrustes_batch_first(X, Y):
+    """
+    align Y with X
+
+    Args:
+        X: (B, L, D)
+        Y: (B, L, D)
+
+    Returns:
+        Z: (B, L, D)
+    """
+
+    mu_X = torch.mean(X, dim=1, keepdim=True)
+    mu_Y = torch.mean(Y, dim=1, keepdim=True)
+
+    X0 = X - mu_X
+    Y0 = Y - mu_Y
+
+    # (B, D, D)
+    M = torch.matmul(X0.transpose(1,2), Y0)
+    U, S, V = torch.svd(M)
+
+    # (B, D, D)
+    R = torch.matmul(V, U.transpose(1, 2))
+
+    Z = torch.matmul(Y0, R) + mu_X
+
+    return Z
+
 def procrustes(X, Y):
     """
     align Y with X
 
     Args:
-        X: (N, D)
-        Y: (N, D)
+        X: (L, B/0, D)
+        Y: (L, B/0, D)
 
     Returns:
-        Z: (N, D)
+        Z: (L, B/0, D)
     """
-    mu_X = torch.mean(X, dim=0, keepdim=True)
-    mu_Y = torch.mean(Y, dim=0, keepdim=True)
 
-    X0 = X - mu_X
-    Y0 = Y - mu_Y
+    assert X.ndim == Y.ndim
+    assert X.ndim == 2 or X.ndim == 3
 
-    M = torch.matmul(X0.transpose(0, 1), Y0)
-    U, S, V = torch.svd(M)
-    R = torch.matmul(V, U.transpose(0, 1))
+    if X.ndim == 2:
+        X = X.unsqueeze(0)
+        Y = Y.unsqueeze(0)
+        Z = _procrustes_batch_first(X, Y)
+        return Z.squeeze(0)
 
-    Z = torch.matmul(Y0, R) + mu_X
+    elif X.ndim == 3:
+        # (B, L, D)
+        X = X.permute(1, 0, 2)
+        Y = Y.permute(1, 0, 2)
+        Z = _procrustes_batch_first(X, Y)
 
-    return Z
+        return Z.permute(1, 0, 2)
 
 def pdist(x):
     return torch.norm((x - x[:, None]), p=2.0, dim=2)

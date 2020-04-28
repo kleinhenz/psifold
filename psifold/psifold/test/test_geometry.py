@@ -73,3 +73,11 @@ def test_pnerf_backward():
     err = torch.norm(grad0 - grad1)
 
     assert err < 1e-10
+
+def test_procrustes():
+    X = torch.rand(10, 3).double()
+    R, _, _ = torch.svd(torch.rand(3, 3).double())
+    Y = torch.matmul(X, R) + torch.rand(3)
+    Z = psifold.geometry.procrustes(X, Y)
+    err = torch.norm(X - Z)
+    assert err < 1e-10

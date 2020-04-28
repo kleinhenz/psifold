@@ -95,10 +95,10 @@ def collate_fn(batch):
     mask = pad_sequence([batch[i]["mask"] for i in sorted_indices])
     coords = pad_sequence([batch[i]["coords"] for i in sorted_indices])
 
-    return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords, "length" : sorted_length}
+    return {"id" : ID, "seq" : seq, "kmer" : kmer, "pssm" : pssm, "mask" : mask, "coords" : coords, "length" : sorted_length}
 
 class ProteinNetDataset(Dataset):
-    def __init__(self, fname, section, verbose=True):
+    def __init__(self, fname, section, verbose=False):
         self.class_re = re.compile("(.*)#")
 
         with h5py.File(fname, "r") as h5f:

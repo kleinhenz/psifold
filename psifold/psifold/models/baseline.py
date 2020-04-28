@@ -10,24 +10,30 @@ class Baseline(nn.Module):
     """
     PsiFold implementation
     """
-    def __init__(self, hidden_size=64, linear_units=32, n_layers=2, dropout=0.1):
+    def __init__(self, seq_embed_dim=16, kmer_embed_dim=256, hidden_size=64, linear_units=32, n_layers=2, dropout=0.1):
         super(Baseline, self).__init__()
 
         # save info needed to recreate model from checkpoint
         self.model_name = "baseline"
-        self.model_args = {"hidden_size" : hidden_size,
+        self.model_args = {"seq_embed_dim" : seq_embed_dim,
+                           "kmer_embed_dim" : kmer_embed_dim,
+                           "hidden_size" : hidden_size,
                            "linear_units" : linear_units,
                            "n_layers": n_layers,
                            "dropout": dropout}
 
-        self.fc = nn.Linear(41, hidden_size)
+        self.seq_embed = nn.Embedding(20, seq_embed_dim)
+        self.kmer_embed = nn.Embedding(22**3, kmer_embed_dim)
+
+        input_dim = seq_embed_dim + kmer_embed_dim + 21
+        self.fc = nn.Linear(input_dim, hidden_size)
 
         layers = [nn.Linear(hidden_size, hidden_size), nn.ReLU(), nn.Dropout(dropout)]*n_layers
         self.encoder = nn.Sequential(*layers)
 
         self.geometry = GeometricUnit(hidden_size, linear_units)
 
-    def forward(self, seq, pssm, length):
+    def forward(self, seq, kmer, pssm, length):
         """
         seq: (L x B)
         pssm: (L x B x 21)
@@ -36,11 +42,11 @@ class Baseline(nn.Module):
 
         L, B = seq.size()
 
-        # (L x B x 20)
-        seq = F.one_hot(seq, 20).type(pssm.dtype)
+        seq = self.seq_embed(seq)
+        kmer = self.kmer_embed(kmer)
 
-        # (L x B x 41)
-        encoder_in = torch.cat((seq, pssm), dim=2)
+        # (L x B x input_dim)
+        encoder_in = torch.cat((seq, kmer, pssm), dim=2)
 
         # (L x B x hidden_size)
         encoder_in = self.fc(encoder_in)

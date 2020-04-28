@@ -48,7 +48,7 @@ class PsiFold(nn.Module):
 
         self.geometry = GeometricUnit(hidden_size, linear_units)
 
-    def forward(self, seq, pssm, length):
+    def forward(self, seq, kmer, pssm, length):
         """
         seq: (L x B)
         pssm: (L x B x 21)

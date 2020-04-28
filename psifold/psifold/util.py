@@ -8,7 +8,7 @@ from torch import nn, optim
 from psifold import dRMSD_masked, RGN, PsiFold, Baseline
 
 def to_device(batch, device):
-    for k in ["seq", "pssm", "length", "coords", "mask"]:
+    for k in ["seq", "kmer", "pssm", "length", "coords", "mask"]:
         batch[k] = batch[k].to(device)
 
 def make_model(model_name, model_args):
@@ -41,7 +41,7 @@ def validate(model, val_dloader_dict, device):
             val_loss_group = 0.0
             for batch in dloader:
                 to_device(batch, device)
-                out = model(batch["seq"], batch["pssm"], batch["length"])
+                out = model(batch["seq"], batch["kmer"], batch["pssm"], batch["length"])
                 loss = dRMSD_masked(out, batch["coords"], batch["mask"])
 
                 val_loss += loss.item()
@@ -61,7 +61,7 @@ def train(model, optimizer, train_dloader, device, max_grad_norm=None, output_fr
     last_output = datetime.datetime.now()
     for batch_idx, batch in enumerate(train_dloader):
         to_device(batch, device)
-        out = model(batch["seq"], batch["pssm"], batch["length"])
+        out = model(batch["seq"], batch["kmer"], batch["pssm"], batch["length"])
         optimizer.zero_grad()
         loss = dRMSD_masked(out, batch["coords"], batch["mask"])
         loss.backward()

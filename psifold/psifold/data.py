@@ -9,6 +9,40 @@ import torch
 from torch.utils.data import Dataset, DataLoader, BatchSampler, RandomSampler, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_sequence
 
+from psifold import internal_coords, internal_to_srf
+
+def make_srf_dset_from_protein(coords, seq, kmer, mask):
+    # fill masked coords with nan to keep track
+    coords = coords.masked_fill(mask.logical_not().unsqueeze(1), float("nan"))
+
+    # compute srf coords
+    r, theta, phi = internal_coords(coords.unsqueeze(1), pad=True)
+    srf = internal_to_srf(r, theta, phi).squeeze().view(-1, 3, 3)
+
+    # update mask after propagating nan through calculation
+    mask = (srf == srf).view(-1, 9).all(dim=-1)
+    # always mask out first residue since we don't have full srf coords
+    mask[0] = False
+
+    # select valid regions
+    srf = srf.masked_select(mask.view(-1,1,1)).view(-1, 3, 3)
+    seq = seq.masked_select(mask)
+    kmer = kmer.masked_select(mask)
+
+    return {"srf" : srf, "seq" : seq, "kmer" : kmer}
+
+def make_srf_dset(dset):
+    srf_dset = {"srf" : [], "seq" : [], "kmer" : []}
+
+    for x in tqdm(dset):
+        out = make_srf_dset_from_protein(x["coords"], x["seq"], x["kmer"], x["mask"])
+        for k in srf_dset: srf_dset[k].append(out[k])
+
+    for k in srf_dset:
+        srf_dset[k] = torch.cat(srf_dset[k])
+
+    return srf_dset
+
 def seq2kmer(seq):
     k, c = 3, 22 # only 3-mers for now
     basis = torch.tensor([c]).repeat(k).pow(torch.arange(k))

@@ -3,6 +3,31 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
+def procrustes(X, Y):
+    """
+    align Y with X
+
+    Args:
+        X: (N, D)
+        Y: (N, D)
+
+    Returns:
+        Z: (N, D)
+    """
+    mu_X = torch.mean(X, dim=0, keepdim=True)
+    mu_Y = torch.mean(Y, dim=0, keepdim=True)
+
+    X0 = X - mu_X
+    Y0 = Y - mu_Y
+
+    M = torch.matmul(X0.transpose(0, 1), Y0)
+    U, S, V = torch.svd(M)
+    R = torch.matmul(V, U.transpose(0, 1))
+
+    Z = torch.matmul(Y0, R) + mu_X
+
+    return Z
+
 def pdist(x):
     return torch.norm((x - x[:, None]), p=2.0, dim=2)
 

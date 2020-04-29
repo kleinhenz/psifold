@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 
 import psifold
-from psifold import internal_coords, internal_to_srf, dRMSD, pnerf, nerf
+from psifold import internal_coords, internal_to_srf, dRMSD_masked, pnerf, nerf
 
 def test_nerf_RMSD():
     """test that internal_coords -> nerf is the identity when initialized with first three true coordinates"""
@@ -27,7 +27,8 @@ def test_nerf_dRMSD():
     r, theta, phi = internal_coords(coords, pad=True)
     c_tilde = internal_to_srf(r, theta, phi)
     coords_ = nerf(c_tilde)
-    err = dRMSD(coords_, coords)
+    mask = torch.ones(100, batch_size, dtype=torch.bool)
+    err = dRMSD_masked(coords_, coords, mask)
 
     assert err < 1e-10
 

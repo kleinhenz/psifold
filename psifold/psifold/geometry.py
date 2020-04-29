@@ -65,66 +65,44 @@ def pdist(x):
     return torch.norm((x - x[:, None]), p=2.0, dim=2)
 
 @torch.jit.script
-def dRMSD(x_hat, x):
+def dRMSD(X, Y):
     """Compute dRMSD loss
 
     Args:
-        x_hat: (L, B, D)
-        x: (L, B, D)
-
-    Returns:
-        dRMSD: (scalar) batch averaged root mean square error
-               of pairwise distance matrices of x and x_hat
+        X: (L, D)
+        Y: (L, D)
     """
+    assert X.ndim == Y.ndim == 2
+    assert X.size() == Y.size()
 
-    L, B, D = x_hat.size()
-    assert D == 3
+    L, _ = X.size()
 
-    # (B, L, D)
-    x = x.permute(1, 0, 2)
-    x_hat = x_hat.permute(1, 0, 2)
-
-    # loop over each batch
-    drmsd = torch.zeros(1, dtype=x.dtype, device=x.device)
-    for i in range(B):
-        delta = pdist(x_hat[i]) - pdist(x[i])
-        drmsd += delta.pow(2.0).sum().div(L * (L - 1.0)).pow(0.5)
-
-    return drmsd / B
+    delta = pdist(X) - pdist(Y)
+    return delta.pow(2.0).sum().div(L * (L - 1.0)).pow(0.5)
 
 @torch.jit.script
-def dRMSD_masked(x_hat, x, mask):
+def dRMSD_masked(X, Y, mask):
     """Compute dRMSD loss
 
     Args:
-        x_hat: (L, B, D)
-        x: (L, B, D)
+        X: (L, B, D)
+        Y: (L, B, D)
         mask: (L, B)
-
-    Returns:
-        dRMSD: (scalar) batch averaged root mean square error
-               of pairwise distance matrices of x and x_hat
     """
-    L, B, D = x_hat.size()
+    L, B, D = X.size()
     assert D == 3
 
     # (B, L, D)
-    x = x.permute(1, 0, 2)
-    x_hat = x_hat.permute(1, 0, 2)
+    X = X.permute(1, 0, 2)
+    Y = Y.permute(1, 0, 2)
     mask = mask.permute(1, 0)
 
     # loop over each batch
-    drmsd = torch.zeros(1, dtype=x.dtype, device=x.device)
+    drmsd = torch.zeros(1, dtype=X.dtype, device=X.device)
     for i in range(B):
-        mask_i = mask[i].view(-1, 1)
-        L_i = torch.sum(mask_i)
-
-        x_hat_i = torch.masked_select(x_hat[i], mask_i).view(-1, D)
-        x_i = torch.masked_select(x[i], mask_i).view(-1, D)
-
-        # use custom pdist function (see https://github.com/pytorch/pytorch/issues/25045)
-        delta = pdist(x_hat_i) - pdist(x_i)
-        drmsd += delta.pow(2.0).sum().div(L_i * (L_i - 1.0)).pow(0.5)
+        Xi = torch.masked_select(X[i], mask[i].unsqueeze(1)).view(-1, D)
+        Yi = torch.masked_select(Y[i], mask[i].unsqueeze(1)).view(-1, D)
+        drmsd += dRMSD(Xi, Yi)
 
     return drmsd / B
 

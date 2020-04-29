@@ -146,7 +146,7 @@ class ProteinNetDataset(Dataset):
 
         return out
 
-def make_data_loader(dset, batch_size=32, max_len=None, max_size=None, bucket_size=None):
+def make_data_loader(dset, batch_size=32, max_len=None, max_size=None, bucket_size=None, complete_only=False):
     """
     create a DataLoader for ProteinNet datasets
 
@@ -156,6 +156,11 @@ def make_data_loader(dset, batch_size=32, max_len=None, max_size=None, bucket_si
         max_size: only include first max_size elements of dataset
         bucket_size: size of buckets used by BucketByLenRandomBatchSampler
     """
+
+    if complete_only:
+        indices = torch.tensor([i for i, x in enumerate(dset) if x["mask"].all()])
+        dset = Subset(dset, indices)
+
     if max_len:
         assert max_len > 0
         indices = [i for i, x in enumerate(dset) if x["seq"].numel() <= max_len]
@@ -163,7 +168,7 @@ def make_data_loader(dset, batch_size=32, max_len=None, max_size=None, bucket_si
 
     if max_size:
         assert max_size > 0
-        dset = Subset(dset, range(max_size))
+        dset = Subset(dset, torch.randperm(len(dset))[:max_size])
 
     if bucket_size:
         lengths = torch.tensor([x["seq"].shape[0] for x in dset])

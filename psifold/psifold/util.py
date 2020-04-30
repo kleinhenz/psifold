@@ -29,7 +29,9 @@ def restore_from_checkpoint(checkpoint, device):
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
     val_loss = checkpoint["val_loss"]
-    return model, optimizer, val_loss
+    train_loss_history = checkpoint["train_loss_history"]
+    val_loss_history = checkpoint["val_loss_history"]
+    return model, optimizer, val_loss, train_loss_history, val_loss_history
 
 def validate(model, val_dloader_dict, device):
     model.eval()
@@ -79,11 +81,9 @@ def train(model, optimizer, train_dloader, device, max_grad_norm=None, output_fr
 
     return train_loss
 
-def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device, max_grad_norm=None, epochs=10, output_frequency=60, checkpoint_file="checkpoint.pt", best_val_loss=math.inf):
+def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device, max_grad_norm=None, epochs=10, output_frequency=60, checkpoint_file="checkpoint.pt", best_val_loss=math.inf, train_loss_history = [], val_loss_history = []):
     best_model_state_dict = copy.deepcopy(model.state_dict())
 
-    train_loss_history = []
-    val_loss_history = []
     for epoch in range(epochs):
         start = datetime.datetime.now()
         train_loss = train(model, optimizer, train_dloader, device, max_grad_norm=max_grad_norm, output_frequency=output_frequency)

@@ -82,12 +82,14 @@ def main():
     if args.load_checkpoint:
         print(f"restoring state from {args.load_checkpoint}")
         checkpoint = torch.load(args.load_checkpoint)
-        model, optimizer, best_val_loss = restore_from_checkpoint(checkpoint, device)
+        model, optimizer, best_val_loss, train_loss_history, val_loss_history = restore_from_checkpoint(checkpoint, device)
     else:
         model = make_model(args.model, model_args)
         model.to(device)
         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
         best_val_loss = math.inf
+        train_loss_history = []
+        val_loss_history = []
 
     n_params = count_parameters(model)
     print(f"n_params = {n_params}")
@@ -102,7 +104,9 @@ def main():
                            epochs=args.epochs,
                            output_frequency=60,
                            checkpoint_file=args.save_checkpoint,
-                           best_val_loss=best_val_loss)
+                           best_val_loss=best_val_loss,
+                           train_loss_history=train_loss_history,
+                           val_loss_history=val_loss_history)
 
 if __name__ == "__main__":
     main()

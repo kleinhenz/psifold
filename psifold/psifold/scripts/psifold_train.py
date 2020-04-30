@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--val.section", default="/validation", dest="val_section", help="hdf5 section containing validation set")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--train_size", type=int, default=None)
+    parser.add_argument("--complete_only", action="store_true")
     parser.add_argument("--max_len", type=int, default=None)
 
     parser.add_argument("--epochs", type=int, default=10)
@@ -65,7 +66,8 @@ def main():
                                      max_len=args.max_len,
                                      max_size=args.train_size,
                                      batch_size=args.batch_size,
-                                     bucket_size=32*args.batch_size)
+                                     bucket_size=32*args.batch_size,
+                                     complete_only=args.complete_only)
     val_dset = ProteinNetDataset(args.input_file, args.val_section)
     val_dset_groups = group_by_class(val_dset)
     val_dloader_dict = {k : make_data_loader(v, batch_size=args.batch_size) for k, v in val_dset_groups.items()}

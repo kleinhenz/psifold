@@ -82,6 +82,8 @@ def train(model, optimizer, train_dloader, device, max_grad_norm=None, output_fr
 def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device, max_grad_norm=None, epochs=10, output_frequency=60, checkpoint_file="checkpoint.pt", best_val_loss=math.inf):
     best_model_state_dict = copy.deepcopy(model.state_dict())
 
+    train_loss_history = []
+    val_loss_history = []
     for epoch in range(epochs):
         start = datetime.datetime.now()
         train_loss = train(model, optimizer, train_dloader, device, max_grad_norm=max_grad_norm, output_frequency=output_frequency)
@@ -89,6 +91,9 @@ def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device, ma
         elapsed = datetime.datetime.now() - start
         print(f"epoch {epoch:d}: elapsed = {elapsed}, train dRMSD (A) = {train_loss/100:0.3f}, val dRMSD (A) = {val_loss/100:0.3f}")
         print("val dRMSD (A) by subgroup:\n" + "\n".join(f"{k} : {v/100:0.3f}" for k,v in val_loss_by_group.items()))
+
+        train_loss_history.append(train_loss)
+        val_loss_history.append(val_loss)
 
         # checkpoint if we improve validation loss
         if val_loss < best_val_loss:
@@ -100,6 +105,8 @@ def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device, ma
                 "model_args" : model.model_args,
                 "epoch": epoch,
                 "val_loss" : val_loss,
+                "train_loss_history" : train_loss_history,
+                "val_loss_history" : val_loss_history,
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 }

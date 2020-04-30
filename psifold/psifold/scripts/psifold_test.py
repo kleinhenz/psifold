@@ -29,7 +29,7 @@ def main():
 
     print(f"restoring state from {args.load_checkpoint}")
     checkpoint = torch.load(args.load_checkpoint)
-    model, optimizer, best_val_loss = restore_from_checkpoint(checkpoint, device)
+    model, _, _, _, _ = restore_from_checkpoint(checkpoint, device)
     model.to(device)
 
     test_loss, test_loss_by_group = validate(model, test_dloader_dict, device)

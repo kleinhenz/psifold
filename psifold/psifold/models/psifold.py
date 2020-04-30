@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 import math
 
-from psifold import GeometricUnit
+from psifold.geometry import pnerf
 
 # from https://pytorch.org/tutorials/beginner/transformer_tutorial.html
 class PositionalEncoding(nn.Module):
@@ -28,25 +28,31 @@ class PsiFold(nn.Module):
     """
     PsiFold implementation
     """
-    def __init__(self, hidden_size=64, linear_units=32, n_layers=2, nhead=4, dim_feedforward=256, dropout=0.1):
+    def __init__(self, seq_embed_dim=16, kmer_embed_dim=256, hidden_size=512, n_layers=2, nhead=8, dim_feedforward=1024, dropout=0.1):
         super(PsiFold, self).__init__()
 
         # save info needed to recreate model from checkpoint
         self.model_name = "psifold"
-        self.model_args = {"hidden_size" : hidden_size,
-                           "linear_units" : linear_units,
+        self.model_args = {"seq_embed_dim" : seq_embed_dim,
+                           "kmer_embed_dim" : kmer_embed_dim,
+                           "hidden_size" : hidden_size,
                            "n_layers": n_layers,
                            "nhead" : nhead,
                            "dim_feedforward" : dim_feedforward,
                            "dropout": dropout}
 
-        self.fc = nn.Linear(41, hidden_size)
+        self.seq_embed = nn.Embedding(20, seq_embed_dim)
+        self.kmer_embed = nn.Embedding(22**3, kmer_embed_dim)
+
+        input_dim = seq_embed_dim + kmer_embed_dim + 21
+        self.fc0 = nn.Linear(input_dim, hidden_size)
+
         self.pos_encoder = PositionalEncoding(hidden_size, dropout)
 
         encoder_layer = nn.TransformerEncoderLayer(hidden_size, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
 
-        self.geometry = GeometricUnit(hidden_size, linear_units)
+        self.fc1 = nn.Linear(hidden_size, 9)
 
     def forward(self, seq, kmer, pssm, length):
         """
@@ -57,14 +63,17 @@ class PsiFold(nn.Module):
 
         L, B = seq.size()
 
-        # (L x B x 20)
-        seq = F.one_hot(seq, 20).type(pssm.dtype)
+        # (L x B x seq_embed_dim)
+        seq = self.seq_embed(seq)
 
-        # (L x B x 41)
-        encoder_in = torch.cat((seq, pssm), dim=2)
+        # (L x B x kmer_embed_dim)
+        kmer = self.kmer_embed(kmer)
+
+        # (L x B x input_dim)
+        encoder_in = torch.cat((seq, kmer, pssm), dim=2)
 
         # (L x B x hidden_size)
-        encoder_in = self.fc(encoder_in)
+        encoder_in = self.fc0(encoder_in)
 
         # (L x B x hidden_size)
         encoder_in = self.pos_encoder(encoder_in)
@@ -75,7 +84,13 @@ class PsiFold(nn.Module):
         # (L x B x hidden_size)
         encoder_out = self.encoder(encoder_in, src_key_padding_mask=mask)
 
-        # (L x B x 3)
-        coords = self.geometry(encoder_out)
+        # (L x B x 9)
+        srf = self.fc1(encoder_out)
+
+        # (3L x B x 3)
+        srf = srf.view(L, B, 3, 3).permute(0, 2, 1, 3).contiguous().view(3*L, B, 3)
+
+        # (3L x B x 3)
+        coords = pnerf(srf, nfrag=int(math.sqrt(L)))
 
         return coords

@@ -4,7 +4,7 @@ PsiFold is python module for protein structure prediction.
 
 # Installation
 ```
-conda create --name psifold --file requirements.txt
+conda create -n psifold python=3.7
 conda activate psifold
 pip install -e .
 ```
@@ -17,6 +17,9 @@ tar -xvzf casp7.tar.gz
 
 # convert tensorflow records to hdf5 file
 proteinnet2hdf --output="casp7.h5" casp7
+
+# tensorflow records are no longer needed
+rm -r casp7 casp7.tar.gz
 
 # train model
 # model with best validation loss will be saved in checkpoint.pt

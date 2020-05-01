@@ -12,6 +12,7 @@ pip install -e .
 # Usage
 The following commands download the [ProteinNet](https://github.com/aqlaboratory/proteinnet) casp7 dataset and trains the psifold model for 5 epochs.
 ```
+# download tensorflow records
 curl -LO "https://sharehost.hms.harvard.edu/sysbio/alquraishi/proteinnet/tfrecords/casp7.tar.gz"
 tar -xvzf casp7.tar.gz
 

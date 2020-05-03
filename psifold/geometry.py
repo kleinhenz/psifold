@@ -166,14 +166,14 @@ def internal_to_srf(r, theta, phi):
         phi: (L, *)
 
     Returns:
-        c_tilde: (L, *, 3)
+        srf: (L, *, 3)
     """
     assert r.size() == theta.size() == phi.size()
 
-    c_tilde = torch.stack([r * torch.ones_like(phi) * torch.cos(theta),
-                           r * torch.cos(phi) * torch.sin(theta),
-                           r * torch.sin(phi) * torch.sin(theta)], dim=-1)
-    return c_tilde
+    srf = torch.stack([r * torch.ones_like(phi) * torch.cos(theta),
+                       r * torch.cos(phi) * torch.sin(theta),
+                       r * torch.sin(phi) * torch.sin(theta)], dim=-1)
+    return srf
 
 def torsion_to_srf(r, theta, phi):
     """Compute SRF coordinates from internal coordinates (r, theta, phi)
@@ -192,16 +192,16 @@ def torsion_to_srf(r, theta, phi):
     r_sin_theta = r * torch.sin(theta)
 
     # (D, L, B, 3)
-    c_tilde = torch.stack([r_cos_theta.view(1, 1, -1).repeat(L, B, 1),
-                           r_sin_theta * torch.cos(phi),
-                           r_sin_theta * torch.sin(phi)])
+    srf = torch.stack([r_cos_theta.view(1, 1, -1).repeat(L, B, 1),
+                       r_sin_theta * torch.cos(phi),
+                       r_sin_theta * torch.sin(phi)])
 
     #(L, 3, B, D)
-    c_tilde = c_tilde.permute(1, 3, 2, 0)
+    srf = srf.permute(1, 3, 2, 0)
 
     # (3L, B, D)
-    c_tilde = c_tilde.contiguous().view(3*L,B,3)
-    return c_tilde
+    srf = srf.contiguous().view(3*L,B,3)
+    return srf
 
 def collect_geometry(dset):
     bond_lengths = {"n_ca" : [], "ca_c" : [], "c_n" : []}
@@ -248,12 +248,12 @@ def nerf_rot(A, B, C):
     return R
 
 @torch.jit.script
-def nerf_extend(init_coords, c_tilde):
+def nerf_extend(init_coords, srf):
     """Compute cartesian coordinates from SRF coordinates
 
     Args:
         init_coords: (N, *, 3) initialization coordinates
-        c_tilde: (L, *, 3)
+        srf: (L, *, 3)
 
     Returns:
         coords: (L, *, 3)
@@ -261,34 +261,34 @@ def nerf_extend(init_coords, c_tilde):
 
     assert init_coords.size(0) >= 3
 
-    L = c_tilde.size(0)
+    L = srf.size(0)
 
     coords : List[Tensor] = []
 
     A, B, C = init_coords[-3], init_coords[-2], init_coords[-1]
     for i in range(L):
         R = nerf_rot(A, B, C)
-        D = C + torch.matmul(R, c_tilde[i].unsqueeze(-1)).squeeze(-1)
+        D = C + torch.matmul(R, srf[i].unsqueeze(-1)).squeeze(-1)
         coords += [D]
         A, B, C = B, C, D
 
     return torch.stack(coords, dim=0)
 
 
-def nerf(c_tilde):
+def nerf(srf):
     """Compute cartesian coordinates from SRF coordinates
 
     Args:
-        c_tilde: (L, B, 3)
+        srf: (L, B, 3)
 
     Returns:
         coords: (L, B, 3)
     """
-    L, B, _ = c_tilde.size()
+    L, B, _ = srf.size()
     #initialization coordinates
-    c0 = torch.tensor([-math.sqrt(1.0/2.0), math.sqrt(3.0/2.0), 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
-    c1 = torch.tensor([-math.sqrt(2.0), 0.0, 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
-    c2 = torch.tensor([0.0, 0.0, 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
+    c0 = torch.tensor([-math.sqrt(1.0/2.0), math.sqrt(3.0/2.0), 0.0], dtype=srf.dtype, device=srf.device)
+    c1 = torch.tensor([-math.sqrt(2.0), 0.0, 0.0], dtype=srf.dtype, device=srf.device)
+    c2 = torch.tensor([0.0, 0.0, 0.0], dtype=srf.dtype, device=srf.device)
 
     #(3, D)
     init_coords = torch.stack([c0, c1, c2])
@@ -296,21 +296,21 @@ def nerf(c_tilde):
     #(3, B, D)
     init_coords = init_coords.view(3, 1, 3).repeat(1, B, 1)
 
-    coords = nerf_extend(init_coords, c_tilde)
+    coords = nerf_extend(init_coords, srf)
 
     return coords
 
-def pnerf(c_tilde, nfrag):
+def pnerf(srf, nfrag):
     """Compute cartesian coordinates from SRF coordinates
 
     Args:
-        c_tilde: (L, B, 3)
+        srf: (L, B, 3)
         nfrags: number of fragments to processes in parallel
 
     Returns:
         coords: (L, B, 3)
     """
-    L, B, _ = c_tilde.size()
+    L, B, _ = srf.size()
 
     # frag_len = ceil(L / nfrags)
     frag_len = (L + nfrag - 1) // nfrag
@@ -318,17 +318,17 @@ def pnerf(c_tilde, nfrag):
 
     # NOTE we can't pad with zero otherwise backward gives nan
     # also see https://github.com/pytorch/pytorch/issues/31734 (fixed in pytorch 1.5)
-    c_tilde = F.pad(c_tilde, [0, 0, 0, 0, 0, padding], value=0.1)
-    assert c_tilde.size(0) % nfrag == 0
+    srf = F.pad(srf, [0, 0, 0, 0, 0, padding], value=0.1)
+    assert srf.size(0) % nfrag == 0
 
     #(L',F, B, D)
-    c_tilde = c_tilde.view(nfrag, -1, B, 3)
-    c_tilde = c_tilde.permute(1, 0, 2, 3)
+    srf = srf.view(nfrag, -1, B, 3)
+    srf = srf.permute(1, 0, 2, 3)
 
     #initialization coordinates
-    c0 = torch.tensor([-math.sqrt(1.0/2.0), math.sqrt(3.0/2.0), 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
-    c1 = torch.tensor([-math.sqrt(2.0), 0.0, 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
-    c2 = torch.tensor([0.0, 0.0, 0.0], dtype=c_tilde.dtype, device=c_tilde.device)
+    c0 = torch.tensor([-math.sqrt(1.0/2.0), math.sqrt(3.0/2.0), 0.0], dtype=srf.dtype, device=srf.device)
+    c1 = torch.tensor([-math.sqrt(2.0), 0.0, 0.0], dtype=srf.dtype, device=srf.device)
+    c2 = torch.tensor([0.0, 0.0, 0.0], dtype=srf.dtype, device=srf.device)
 
     #(3, D)
     init_coords = torch.stack([c0, c1, c2])
@@ -337,7 +337,7 @@ def pnerf(c_tilde, nfrag):
     init_coords = init_coords.view(3, 1, 1, 3).repeat(1, nfrag, B, 1)
 
     # (L', F, B, D)
-    coords = nerf_extend(init_coords, c_tilde)
+    coords = nerf_extend(init_coords, srf)
 
     # (F, L', B, D)
     coords = coords.permute(1, 0, 2, 3)
@@ -396,9 +396,9 @@ class GeometricUnit(nn.Module):
         phi = torch.atan2(sin, cos)
 
         # (3L, B, 3)
-        c_tilde = torsion_to_srf(self.bond_lengths, self.bond_angles, phi)
+        srf = torsion_to_srf(self.bond_lengths, self.bond_angles, phi)
 
         # (3L, B, 3)
-        coords = pnerf(c_tilde, nfrag=self.nfrag.item())
+        coords = pnerf(srf, nfrag=self.nfrag.item())
 
         return coords

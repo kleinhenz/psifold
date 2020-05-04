@@ -7,7 +7,7 @@ from tqdm import tqdm
 import torch
 
 import psifold
-from psifold import pnerf, internal_coords, internal_to_srf, dRMSD
+from psifold import pnerf, internal_coords, internal_to_srf, dRMSD_masked
 
 def run(length, batch_size, device, epochs=250, sigma=1e-3, lr=1e-4):
     """
@@ -16,6 +16,9 @@ def run(length, batch_size, device, epochs=250, sigma=1e-3, lr=1e-4):
 
     coords = torch.rand(length, batch_size, 3)
     coords = coords.to(device)
+
+    mask = torch.ones(length, batch_size, dtype=torch.bool, device=device)
+
     r, theta, phi = internal_coords(coords, pad=True)
 
     r = r + sigma * torch.randn_like(r)
@@ -30,9 +33,9 @@ def run(length, batch_size, device, epochs=250, sigma=1e-3, lr=1e-4):
 
     loss_history = []
     for epoch in tqdm(range(epochs)):
-        c_tilde = internal_to_srf(r, theta, phi)
-        coords_ = pnerf(c_tilde, nfrag=7)
-        loss = dRMSD(coords_, coords)
+        srf = internal_to_srf(r, theta, phi)
+        coords_ = pnerf(srf, nfrag=7)
+        loss = dRMSD_masked(coords_, coords, mask)
 
         optimizer.zero_grad()
         loss.backward()

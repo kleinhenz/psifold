@@ -218,7 +218,8 @@ def torsion_to_srf(r, theta, phi):
 def collect_geometry(dset):
     bond_lengths = {"n_ca" : [], "ca_c" : [], "c_n" : []}
     bond_angles = {"n_ca_c" : [], "ca_c_n" : [], "c_n_ca" : []}
-    bond_torsions = {"n_ca_c_n" : [], "ca_c_n_ca": [], "c_n_ca_c" : []}
+    # n_ca_c_n, ca_c_n_ca, c_n_ca_c
+    bond_torsions = {"psi" : [], "omega": [], "phi" : []}
 
     for example in dset:
         assert example["mask"].all()

@@ -124,7 +124,8 @@ def internal_coords(coords, pad=False):
         phi: (N|(N-3), *)
     """
 
-    assert coords.size(-1) == 3
+    sz = coords.size()
+    assert sz[-1] == 3
 
     delta = coords[1:] - coords[:-1]
     r = delta.norm(dim=-1)
@@ -150,10 +151,21 @@ def internal_coords(coords, pad=False):
 
     # internal coords are invariant under total translation/rotation (6 dof)
     # pad so that we can reconstruct modulo symmetries from arbitrary initialization coordinates
+
     if pad:
-        r = torch.cat((r[0].repeat(1, 1), r), dim=0)
-        theta = torch.cat((theta[0].repeat(2, 1), theta), dim=0)
-        phi = torch.cat((phi[0].repeat(3, 1), phi), dim=0)
+        # NOTE can't pad r with zeros otherwise nerf_rot matrix becomes undefined
+        r_sz = (1,) + sz[1:-1]
+        r_pad = torch.tensor([1], dtype=coords.dtype, device=coords.device).repeat(*r_sz)
+        r = torch.cat((r_pad, r), dim=0)
+
+        # NOTE can't pad theta with zeros otherwise nerf_rot matrix becomes undefined (can't have AB || BC)
+        theta_sz = (2,) + sz[1:-1]
+        theta_pad = torch.tensor([math.pi/2], dtype=coords.dtype, device=coords.device).repeat(*theta_sz)
+        theta = torch.cat((theta_pad, theta), dim=0)
+
+        phi_sz = (3,) + sz[1:-1]
+        phi_pad = torch.tensor([0], dtype=coords.dtype, device=coords.device).repeat(*phi_sz)
+        phi = torch.cat((phi_pad, phi), dim=0)
 
     return r, theta, phi
 

@@ -4,13 +4,13 @@ import torch.nn.functional as F
 
 import math
 
-from psifold import GeometricUnit
+from psifold.geometry import pnerf
 
 class Baseline(nn.Module):
     """
     PsiFold implementation
     """
-    def __init__(self, seq_embed_dim=16, kmer_embed_dim=256, hidden_size=64, linear_units=32, n_layers=2, dropout=0.1):
+    def __init__(self, seq_embed_dim=16, kmer_embed_dim=256, hidden_size=64, n_layers=2, dropout=0.1):
         super(Baseline, self).__init__()
 
         # save info needed to recreate model from checkpoint
@@ -18,7 +18,6 @@ class Baseline(nn.Module):
         self.model_args = {"seq_embed_dim" : seq_embed_dim,
                            "kmer_embed_dim" : kmer_embed_dim,
                            "hidden_size" : hidden_size,
-                           "linear_units" : linear_units,
                            "n_layers": n_layers,
                            "dropout": dropout}
 
@@ -32,8 +31,6 @@ class Baseline(nn.Module):
         self.encoder = nn.Sequential(*layers)
 
         self.fc1 = nn.Linear(hidden_size, 9)
-
-        self.geometry = GeometricUnit(hidden_size, linear_units)
 
     def forward(self, seq, kmer, pssm, length):
         """

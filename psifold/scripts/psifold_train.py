@@ -31,8 +31,8 @@ def main():
     parser.add_argument("--model", choices=["rgn", "psifold", "baseline"], default="psifold")
 
     # rgn parameters
-    parser.add_argument("--rgn_hidden_size", type=int, default=64)
-    parser.add_argument("--rgn_linear_units", type=int, default=32)
+    parser.add_argument("--rgn_hidden_size", type=int, default=800)
+    parser.add_argument("--rgn_alphabet_size", type=int, default=60)
     parser.add_argument("--rgn_n_layers", type=int, default=2)
     parser.add_argument("--rgn_dropout", type=float, default=0.5)
 
@@ -48,7 +48,6 @@ def main():
     parser.add_argument("--baseline_seq_embed_dim", type=int, default=16)
     parser.add_argument("--baseline_kmer_embed_dim", type=int, default=256)
     parser.add_argument("--baseline_hidden_size", type=int, default=64)
-    parser.add_argument("--baseline_linear_units", type=int, default=32)
     parser.add_argument("--baseline_n_layers", type=int, default=2)
     parser.add_argument("--baseline_dropout", type=float, default=0.5)
 
@@ -73,7 +72,7 @@ def main():
     val_dloader_dict = {k : make_data_loader(v, batch_size=args.batch_size) for k, v in val_dset_groups.items()}
 
     if args.model == "rgn":
-        model_args = {"hidden_size" : args.rgn_hidden_size, "linear_units" : args.rgn_linear_units, "n_layers" : args.rgn_n_layers, "dropout" : args.rgn_dropout}
+        model_args = {"hidden_size" : args.rgn_hidden_size, "alphabet_size" : args.rgn_alphabet_size, "n_layers" : args.rgn_n_layers, "dropout" : args.rgn_dropout}
     elif args.model == "psifold":
         model_args = {"seq_embed_dim" : args.psifold_seq_embed_dim, "kmer_embed_dim" : args.psifold_kmer_embed_dim, "hidden_size" : args.psifold_hidden_size, "n_layers" : args.psifold_n_layers, "nhead" : args.psifold_nhead, "dim_feedforward" : args.psifold_dim_feedforward, "dropout" : args.psifold_dropout}
     elif args.model == "baseline":

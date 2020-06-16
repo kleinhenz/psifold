@@ -43,10 +43,12 @@ class RGN(nn.Module):
 
         # (N-CA, CA-C, C-N)
         self.bond_lengths = nn.Parameter(torch.tensor([145.867432,152.534744,132.935516]))
+        self.bond_lengths.requires_grad = False
 
         # (C-N-CA, N-CA-C, CA-C-N)
         # NOTE values from original rgn code given by pi - self.bond_angles
         self.bond_angles = nn.Parameter(torch.tensor([1.019982,1.204710,1.109421]))
+        self.bond_angles.requires_grad = False
 
     def forward(self, seq, kmer, pssm, length):
         """

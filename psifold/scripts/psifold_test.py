@@ -28,7 +28,7 @@ def main():
     test_dloader_dict = {k : make_data_loader(v, batch_size=16) for k, v in test_dset_groups.items()}
 
     print(f"restoring state from {args.load_checkpoint}")
-    checkpoint = torch.load(args.load_checkpoint)
+    checkpoint = torch.load(args.load_checkpoint, map_location=device)
     model, _, _, _, _ = restore_from_checkpoint(checkpoint, device)
     model.to(device)
 

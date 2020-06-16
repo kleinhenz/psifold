@@ -80,7 +80,7 @@ def main():
 
     if args.load_checkpoint:
         print(f"restoring state from {args.load_checkpoint}")
-        checkpoint = torch.load(args.load_checkpoint)
+        checkpoint = torch.load(args.load_checkpoint, map_location=device)
         model, optimizer, best_val_loss, train_loss_history, val_loss_history = restore_from_checkpoint(checkpoint, device)
     else:
         model = make_model(args.model, model_args)

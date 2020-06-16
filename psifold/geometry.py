@@ -195,6 +195,9 @@ def torsion_to_srf(r, theta, phi):
         r: (3,)
         theta: (3,)
         phi: (L, B, 3)
+
+    Returns:
+        srf: (3L, B, 3)
     """
 
     L, B, _ = phi.size()

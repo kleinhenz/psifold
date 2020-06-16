@@ -37,6 +37,7 @@ class RGN(nn.Module):
         self.fc = nn.Linear(2*hidden_size, alphabet_size)
 
         #initialize alphabet to random values between -pi and pi
+        #each entry in the alphabet represents a triplet of angles
         u = torch.distributions.Uniform(-math.pi, math.pi)
         self.alphabet = nn.Parameter(u.rsample(torch.Size([alphabet_size, 3])))
 
@@ -59,7 +60,7 @@ class RGN(nn.Module):
         # (L x B x 20)
         seq = F.one_hot(seq, 20).type(pssm.dtype)
 
-        # (L x B x (embed_dim + 21))
+        # (L x B x (20 + 21))
         lstm_in = torch.cat((seq, pssm), dim=2)
         lstm_in = pack_padded_sequence(lstm_in, length)
 
@@ -69,7 +70,7 @@ class RGN(nn.Module):
 
         ## angularization ##
 
-        # (L, B, linear_units)
+        # (L, B, alphabet_size)
         x = F.softmax(self.fc(lstm_out), dim=2)
 
         # (L, B, 3)

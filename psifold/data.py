@@ -184,3 +184,30 @@ def group_by_class(dset):
     classes = np.array([x["class"] for x in dset])
     out = {c : Subset(dset, np.nonzero(classes == c)[0]) for c in np.unique(classes)}
     return out
+
+def make_pdb_record(record):
+    """
+    create a pdb record from a proteinnet record
+    pdb record contains only CA atoms
+    """
+
+    aa_list = ["ALA", "CYS", "ASP", "GLU", "PHE", "GLY", "HIS", "ILE", "LYS", "LEU", "MET", "ASN", "PRO", "GLN", "ARG", "SER", "THR", "VAL", "TRP", "TRY"]
+
+    seq = record["seq"]
+    coords = record["coords"] / 100.0
+    ca_coords = coords[1::3]
+
+    lines = []
+    for i in range(len(seq)):
+
+        aa = aa_list[seq[i]]
+        x = ca_coords[i,0]
+        y = ca_coords[i,1]
+        z = ca_coords[i,2]
+        occ = 1.0
+        T = 10.0
+
+        line = f"ATOM  {i:5d}  CA  {aa} A{i:4d}    {x:8.3f}{y:8.3f}{z:8.3f}{occ:6.2f}{T:6.2f}           C  \n"
+        lines.append(line)
+
+    return "".join(lines)

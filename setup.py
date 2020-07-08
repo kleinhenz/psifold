@@ -6,8 +6,7 @@ setup(
     install_requires=["numpy", "h5py", "matplotlib", "torch>=1.5", "tqdm", "tensorflow", "pytest"],
     python_requires="~=3.6",
     entry_points = {
-        "console_scripts" : ["psifold_train=psifold.scripts.psifold_train:main",
-                             "psifold_test=psifold.scripts.psifold_test:main",
+        "console_scripts" : ["run_rgn=psifold.scripts.run_rgn:main",
                              "proteinnet2hdf=psifold.scripts.proteinnet2hdf:main"]
         }
 )

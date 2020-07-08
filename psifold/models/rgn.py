@@ -50,7 +50,7 @@ class RGN(nn.Module):
         self.bond_angles = nn.Parameter(torch.tensor([1.019982,1.204710,1.109421]))
         self.bond_angles.requires_grad = False
 
-    def forward(self, seq, kmer, pssm, length):
+    def forward(self, seq, pssm, length):
         """
         seq: (L x B)
         pssm: (L x B x 21)

@@ -11,6 +11,27 @@ from torch.nn.utils.rnn import pad_sequence, pack_sequence
 
 from psifold import internal_coords, internal_to_srf
 
+def collect_geometry(dset):
+    bond_lengths = {"n_ca" : [], "ca_c" : [], "c_n" : []}
+    bond_angles = {"n_ca_c" : [], "ca_c_n" : [], "c_n_ca" : []}
+    # n_ca_c_n, ca_c_n_ca, c_n_ca_c
+    bond_torsions = {"psi" : [], "omega": [], "phi" : []}
+
+    for example in dset:
+        assert example["mask"].all()
+        coords = example["coords"].view(-1, 1, 3)
+        r, theta, phi = internal_coords(coords)
+        for i, (x, y, z) in enumerate(zip(bond_lengths, bond_angles, bond_torsions)):
+            bond_lengths[x].append(r[i::3].squeeze())
+            bond_angles[y].append(theta[i::3].squeeze())
+            bond_torsions[z].append(phi[i::3].squeeze())
+
+    for x in [bond_lengths, bond_angles, bond_torsions]:
+        for k,v in x.items():
+            x[k] = torch.cat(v)
+
+    return bond_lengths, bond_angles, bond_torsions
+
 def make_srf_dset_from_protein(coords, seq, kmer, mask):
     # fill masked coords with nan to keep track
     coords = coords.masked_fill(mask.logical_not().unsqueeze(1), float("nan"))
@@ -84,69 +105,7 @@ class BucketByLenRandomBatchSampler(torch.utils.data.Sampler):
     def __len__(self):
         return self.nbatches
 
-def collate_fn(batch):
-    length = torch.tensor([x["seq"].size(0) for x in batch])
-    sorted_length, sorted_indices = length.sort(0, True)
-
-    ID = [batch[i]["id"] for i in sorted_indices]
-    seq = pad_sequence([batch[i]["seq"] for i in sorted_indices])
-    kmer = pad_sequence([batch[i]["kmer"] for i in sorted_indices])
-    pssm = pad_sequence([batch[i]["pssm"] for i in sorted_indices])
-    mask = pad_sequence([batch[i]["mask"] for i in sorted_indices])
-    coords = pad_sequence([batch[i]["coords"] for i in sorted_indices])
-
-    return {"id" : ID, "seq" : seq, "kmer" : kmer, "pssm" : pssm, "mask" : mask, "coords" : coords, "length" : sorted_length}
-
-class ProteinNetDataset(Dataset):
-    def __init__(self, fname, section, verbose=False):
-        self.class_re = re.compile("(.*)#")
-
-        with h5py.File(fname, "r") as h5f:
-            h5dset = h5f[section][:]
-
-        N = len(h5dset)
-        r = tqdm(range(N)) if verbose else range(N)
-        self.dset = [self.read_record(h5dset[i]) for i in r]
-
-    def __len__(self):
-        return len(self.dset)
-
-    def __getitem__(self, idx):
-        return self.dset[idx]
-
-    def read_record(self, record):
-        # identifier
-        ID = record["id"]
-
-        # primary amino acid sequence (N)
-        seq = torch.from_numpy(record["primary"])
-        N = seq.size(0)
-
-        # construct 3-mers
-        kmer = seq2kmer(seq)
-
-        # PSSM + information content (N x 21)
-        pssm = torch.from_numpy(np.reshape(record["evolutionary"], (-1, 21), "C"))
-
-        # coordinate available (3N)
-        mask = torch.from_numpy(record["mask"]).bool().repeat_interleave(3)
-
-        # tertiary structure (3N x 3)
-        coords = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C"))
-
-        # alpha carbon only
-        if coords[0::3].eq(0).all() and coords[2::3].eq(0).all():
-            mask = torch.logical_and(mask, torch.tensor([False, True, False]).repeat(N))
-
-        out = {"id" : ID, "seq" : seq, "kmer" : kmer, "pssm" : pssm, "mask" : mask, "coords" : coords}
-
-        # extract class from id if present
-        class_match = self.class_re.match(ID)
-        if class_match: out["class"] = class_match[1]
-
-        return out
-
-def make_data_loader(dset, batch_size=32, max_len=None, max_size=None, bucket_size=None, complete_only=False):
+def make_data_loader(dset, collate_fn, batch_size=32, max_len=None, max_size=None, bucket_size=None, complete_only=False):
     """
     create a DataLoader for ProteinNet datasets
 
@@ -180,15 +139,9 @@ def make_data_loader(dset, batch_size=32, max_len=None, max_size=None, bucket_si
 
     return data_loader
 
-def group_by_class(dset):
-    classes = np.array([x["class"] for x in dset])
-    out = {c : Subset(dset, np.nonzero(classes == c)[0]) for c in np.unique(classes)}
-    return out
-
-def make_pdb_record(record):
+def make_pdb_record(seq, ca_coords):
     """
-    create a pdb record from a proteinnet record
-    pdb record contains only CA atoms
+    create a pdb record
     """
 
     aa_list = ["ALA", "CYS", "ASP", "GLU", "PHE", "GLY", "HIS", "ILE", "LYS", "LEU", "MET", "ASN", "PRO", "GLN", "ARG", "SER", "THR", "VAL", "TRP", "TRY"]

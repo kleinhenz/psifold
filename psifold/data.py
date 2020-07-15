@@ -1,4 +1,7 @@
+import pathlib
 import re
+import subprocess
+import tempfile
 
 import h5py
 import numpy as np
@@ -146,10 +149,6 @@ def make_pdb_record(seq, ca_coords):
 
     aa_list = ["ALA", "CYS", "ASP", "GLU", "PHE", "GLY", "HIS", "ILE", "LYS", "LEU", "MET", "ASN", "PRO", "GLN", "ARG", "SER", "THR", "VAL", "TRP", "TRY"]
 
-    seq = record["seq"]
-    coords = record["coords"] / 100.0
-    ca_coords = coords[1::3]
-
     lines = []
     for i in range(len(seq)):
 
@@ -164,3 +163,30 @@ def make_pdb_record(seq, ca_coords):
         lines.append(line)
 
     return "".join(lines)
+
+def run_tm_score(seq, ca_coords, ca_coords_ref, tmscore_path=""):
+    pdb = make_pdb_record(seq, ca_coords)
+    pdb_ref = make_pdb_record(seq, ca_coords_ref)
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        path_a = pathlib.Path(tmpdirname) / "model.pdb"
+        with open(path_a, "w") as f:
+            f.write(pdb)
+
+        path_b = pathlib.Path(tmpdirname) / "native.pdb"
+        with open(path_b, "w") as f:
+            f.write(pdb_ref)
+
+        if not tmscore_path:
+            tmscore_path = "TMscore"
+
+        proc = subprocess.run([tmscore_path, "model.pdb", "native.pdb"], cwd=tmpdirname, capture_output=True)
+
+    s = proc.stdout.decode()
+    tm_score = float(re.search("TM-score\s*=\s*(\d+\.\d*)", s)[1])
+    gdt_ts_score = float(re.search("GDT-TS-score\s*=\s*(\d+\.\d*)", s)[1])
+    rmsd = float(re.search("RMSD of  the common residues\s*=\s*(\d+\.\d*)", s)[1])
+
+    out = {"tm" : tm_score, "gdt_ts" : gdt_ts_score, "rmsd" : rmsd, "stdout" : s}
+
+    return out

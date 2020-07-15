@@ -16,7 +16,7 @@ from torch import nn, optim
 from torch.utils.data import Dataset, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_sequence
 
-from psifold import RGN, dRMSD_masked, make_data_loader
+from psifold import RGN, dRMSD_masked, make_data_loader, count_parameters
 
 def restore_from_checkpoint(checkpoint, device):
     model = RGN(**checkpoint["model_args"])
@@ -28,9 +28,6 @@ def restore_from_checkpoint(checkpoint, device):
     train_loss_history = checkpoint["train_loss_history"]
     val_loss_history = checkpoint["val_loss_history"]
     return model, optimizer, val_loss, train_loss_history, val_loss_history
-
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 class RGNDataset(Dataset):
     def __init__(self, fname, section, verbose=False):

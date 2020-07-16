@@ -16,6 +16,7 @@ from torch import nn, optim
 from torch.utils.data import Dataset, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_sequence
 
+import psifold
 from psifold import RGN, dRMSD_masked, make_data_loader, count_parameters
 
 def restore_from_checkpoint(checkpoint, device):
@@ -96,14 +97,32 @@ def to_device(batch, device):
     for k in ["seq", "pssm", "length", "coords", "mask"]:
         batch[k] = batch[k].to(device)
 
+def tm_score_batch(batch, coords):
+    tm_scores = {}
+
+    N = len(batch["id"])
+    for i in range(N):
+        ID = batch["id"][i]
+        l = batch["length"][i]
+        seq = batch["seq"][:l,i]
+        ca_coords = coords[1:(3*l):3,i,:] / 100.0
+        ca_coords_ref = batch["coords"][1:(3*l):3,i,:] / 100.0
+        out = psifold.data.run_tm_score(seq, ca_coords, ca_coords_ref)
+
+        tm_scores["ID"] = out["tm"]
+
+    return tm_scores
+
 def validate(model, val_dloader_dict, device):
     model.eval()
     val_loss = 0.0
     val_loss_by_group = {}
+    tm_scores_by_group = {}
 
     with torch.no_grad():
         for group, dloader in val_dloader_dict.items():
             val_loss_group = 0.0
+            tm_scores_group = {}
             for batch in dloader:
                 to_device(batch, device)
                 out = model(batch["seq"], batch["pssm"], batch["length"])
@@ -112,12 +131,15 @@ def validate(model, val_dloader_dict, device):
                 val_loss += loss.item()
                 val_loss_group += loss.item()
 
+                tm_scores_group.update(tm_score_batch(batch, out))
+
             val_loss_by_group[group] = val_loss_group / len(dloader)
+            tm_scores_by_group[group] = tm_scores_group
 
     N = sum(len(dloader) for group, dloader in val_dloader_dict.items())
     val_loss /= N
 
-    return val_loss, val_loss_by_group
+    return val_loss, val_loss_by_group, tm_scores_by_group
 
 def train(model, optimizer, train_dloader, device, max_grad_norm=None, output_frequency = 60):
     model.train()
@@ -150,10 +172,17 @@ def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device, ma
     for epoch in range(epochs):
         start = datetime.datetime.now()
         train_loss = train(model, optimizer, train_dloader, device, max_grad_norm=max_grad_norm, output_frequency=output_frequency)
-        val_loss, val_loss_by_group = validate(model, val_dloader_dict, device)
+        val_loss, val_loss_by_group, tm_scores_by_group = validate(model, val_dloader_dict, device)
         elapsed = datetime.datetime.now() - start
         print(f"epoch {epoch:d}: elapsed = {elapsed}, train dRMSD (A) = {train_loss/100:0.3f}, val dRMSD (A) = {val_loss/100:0.3f}")
+
         print("val dRMSD (A) by subgroup:\n" + "\n".join(f"{k} : {v/100:0.3f}" for k,v in val_loss_by_group.items()))
+
+        print("test tm-scores by subgroup:")
+        for group, tm_scores in tm_scores_by_group.items():
+            scores = np.array(list(tm_scores.values()))
+            q = np.quantile(scores, [0.25, 0.5, 0.75])
+            print(f"{group}: {q[0]:0.2f}-{q[1]:0.2f}-{q[2]:0.2f}")
 
         train_loss_history.append(train_loss)
         val_loss_history.append(val_loss)
@@ -266,8 +295,14 @@ def main():
                                val_loss_history=val_loss_history)
 
     if args.test:
-        test_loss, test_loss_by_group = validate(model, test_dloader_dict, device)
+        test_loss, test_loss_by_group, tm_scores_by_group = validate(model, test_dloader_dict, device)
         print("test dRMSD (A) by subgroup:\n" + "\n".join(f"{k} : {v/100:0.3f}" for k,v in test_loss_by_group.items()))
+
+        print("test tm-scores by subgroup:")
+        for group, tm_scores in tm_scores_by_group.items():
+            scores = np.array(list(tm_scores.values()))
+            q = np.quantile(scores, [0.25, 0.5, 0.75])
+            print(f"{group}: {q[0]:0.2f}-{q[1]:0.2f}-{q[2]:0.2f}")
 
 if __name__ == "__main__":
     main()

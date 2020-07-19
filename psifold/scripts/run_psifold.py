@@ -123,7 +123,7 @@ def tm_score_batch(batch, coords):
         ca_coords_ref = batch["coords"][mask,i,:]
         out = psifold.data.run_tm_score(seq, ca_coords, ca_coords_ref, tmscore_path=tmscore_path)
 
-        tm_scores["ID"] = out["tm"]
+        tm_scores[ID] = out["tm"]
 
     return tm_scores
 

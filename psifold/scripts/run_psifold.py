@@ -18,7 +18,7 @@ from torch.utils.data import Dataset, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_sequence
 
 import psifold
-from psifold import PsiFold, make_data_loader, count_parameters
+from psifold import PsiFold, make_data_loader, count_parameters, pnerf
 
 tmscore_path = "TMscore"
 
@@ -65,7 +65,7 @@ class PsiFoldDataset(Dataset):
         mask = torch.from_numpy(record["mask"]).bool()
 
         # tertiary structure (N x 3)
-        coords = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C"))
+        coords = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C")) / 100.0
         coords = coords[1::3] # c-alpha only
 
         # fill masked coords with nan to keep track
@@ -119,8 +119,8 @@ def tm_score_batch(batch, coords):
         mask = batch["mask"][:,i]
 
         seq = batch["seq"][mask,i]
-        ca_coords = coords[mask,i,:] / 100.0
-        ca_coords_ref = batch["coords"][mask,i,:] / 100.0
+        ca_coords = coords[mask,i,:]
+        ca_coords_ref = batch["coords"][mask,i,:]
         out = psifold.data.run_tm_score(seq, ca_coords, ca_coords_ref, tmscore_path=tmscore_path)
 
         tm_scores["ID"] = out["tm"]
@@ -140,13 +140,14 @@ def validate(model, val_dloader_dict, device):
             for batch in dloader:
                 to_device(batch, device)
                 seq, pssm, length, srf, mask = [batch[k] for k in ["seq", "pssm", "length", "srf", "mask"]]
-                out = model(seq, pssm, length)
-                loss = (out[mask] - srf[mask]).pow(2).sum(-1).sqrt().mean()
+                srf_predict = model(seq, pssm, length)
+                loss = (srf_predict[mask] - srf[mask]).pow(2).sum(-1).sqrt().mean()
 
                 val_loss += loss.item()
                 val_loss_group += loss.item()
 
-                tm_scores_group.update(tm_score_batch(batch, out))
+                coords_predict = pnerf(srf_predict, nfrag=int(math.sqrt(seq.size(0))))
+                tm_scores_group.update(tm_score_batch(batch, coords_predict))
 
             val_loss_by_group[group] = val_loss_group / len(dloader)
             tm_scores_by_group[group] = tm_scores_group
@@ -164,9 +165,9 @@ def train(model, optimizer, train_dloader, device, max_grad_norm=None, output_fr
     for batch_idx, batch in enumerate(train_dloader):
         to_device(batch, device)
         seq, pssm, length, srf, mask = [batch[k] for k in ["seq", "pssm", "length", "srf", "mask"]]
-        out = model(seq, pssm, length)
+        srf_predict = model(seq, pssm, length)
         optimizer.zero_grad()
-        loss = (out[mask] - srf[mask]).pow(2).sum(-1).sqrt().mean()
+        loss = (srf_predict[mask] - srf[mask]).pow(2).sum(-1).sqrt().mean()
         loss.backward()
 
         if max_grad_norm: nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
@@ -192,7 +193,7 @@ def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device, ma
         elapsed = datetime.datetime.now() - start
         print(f"epoch {epoch:d}: elapsed = {elapsed}, train loss = {train_loss:0.3f}, val loss = {val_loss:0.3f}")
 
-        print("val loss (A) by subgroup:\n" + "\n".join(f"{k} : {v/100:0.3f}" for k,v in val_loss_by_group.items()))
+        print("val loss (A) by subgroup:\n" + "\n".join(f"{k} : {v:0.3f}" for k,v in val_loss_by_group.items()))
 
         print("test tm-scores by subgroup:")
         for group, tm_scores in tm_scores_by_group.items():
@@ -315,7 +316,7 @@ def main():
 
     if args.test:
         test_loss, test_loss_by_group, tm_scores_by_group = validate(model, test_dloader_dict, device)
-        print("test loss (A) by subgroup:\n" + "\n".join(f"{k} : {v/100:0.3f}" for k,v in test_loss_by_group.items()))
+        print("test loss (A) by subgroup:\n" + "\n".join(f"{k} : {v:0.3f}" for k,v in test_loss_by_group.items()))
 
         print("test tm-scores by subgroup:")
         for group, tm_scores in tm_scores_by_group.items():

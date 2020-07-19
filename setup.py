@@ -7,6 +7,7 @@ setup(
     python_requires="~=3.6",
     entry_points = {
         "console_scripts" : ["run_rgn=psifold.scripts.run_rgn:main",
+                             "run_psifold=psifold.scripts.run_psifold:main",
                              "proteinnet2hdf=psifold.scripts.proteinnet2hdf:main"]
         }
 )

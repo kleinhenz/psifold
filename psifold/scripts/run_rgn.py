@@ -239,7 +239,7 @@ def main():
     parser.add_argument("--dropout", type=float, default=0.5)
 
     args = parser.parse_args()
-    print("running rgn_train...")
+    print("running run_rgn...")
     print("args:", vars(args))
 
     global tmscore_path

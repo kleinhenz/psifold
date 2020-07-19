@@ -177,7 +177,7 @@ def run_tm_score(seq, ca_coords, ca_coords_ref, tmscore_path="TMscore"):
         with open(path_b, "w") as f:
             f.write(pdb_ref)
 
-        proc = subprocess.run([tmscore_path, "model.pdb", "native.pdb"], cwd=tmpdirname, capture_output=True)
+        proc = subprocess.run([tmscore_path, "model.pdb", "native.pdb"], cwd=tmpdirname, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     s = proc.stdout.decode()
     tm_score = float(re.search("TM-score\s*=\s*(\d+\.\d*)", s)[1])

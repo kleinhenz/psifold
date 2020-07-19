@@ -253,6 +253,7 @@ def main():
     print("running rgn_train...")
     print("args:", vars(args))
 
+    global tmscore_path
     tmscore_path = args.tmscore_path
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

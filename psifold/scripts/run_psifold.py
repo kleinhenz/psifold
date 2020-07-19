@@ -116,9 +116,11 @@ def tm_score_batch(batch, coords):
     for i in range(N):
         ID = batch["id"][i]
         l = batch["length"][i]
-        seq = batch["seq"][:l,i]
-        ca_coords = coords[:l,i,:] / 100.0
-        ca_coords_ref = batch["coords"][:l,i,:] / 100.0
+        mask = batch["mask"][:,i]
+
+        seq = batch["seq"][mask,i]
+        ca_coords = coords[mask,i,:] / 100.0
+        ca_coords_ref = batch["coords"][mask,i,:] / 100.0
         out = psifold.data.run_tm_score(seq, ca_coords, ca_coords_ref, tmscore_path=tmscore_path)
 
         tm_scores["ID"] = out["tm"]

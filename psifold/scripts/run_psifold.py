@@ -20,6 +20,8 @@ from torch.nn.utils.rnn import pad_sequence, pack_sequence
 import psifold
 from psifold import PsiFold, make_data_loader, count_parameters
 
+tmscore_path = "TMscore"
+
 def restore_from_checkpoint(checkpoint, device):
     model = PsiFold(**checkpoint["model_args"])
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -117,7 +119,7 @@ def tm_score_batch(batch, coords):
         seq = batch["seq"][:l,i]
         ca_coords = coords[:l,i,:] / 100.0
         ca_coords_ref = batch["coords"][:l,i,:] / 100.0
-        out = psifold.data.run_tm_score(seq, ca_coords, ca_coords_ref)
+        out = psifold.data.run_tm_score(seq, ca_coords, ca_coords_ref, tmscore_path=tmscore_path)
 
         tm_scores["ID"] = out["tm"]
 
@@ -230,6 +232,7 @@ def main():
     parser.add_argument("--train_size", type=int, default=None)
     parser.add_argument("--complete_only", action="store_true")
     parser.add_argument("--max_len", type=int, default=None)
+    parser.add_argument("--tmscore_path", type=str, default="TMscore")
 
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--learning_rate", type=float, default=1e-3)
@@ -249,6 +252,8 @@ def main():
     args = parser.parse_args()
     print("running rgn_train...")
     print("args:", vars(args))
+
+    tmscore_path = args.tmscore_path
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(device)

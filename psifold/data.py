@@ -108,7 +108,7 @@ class BucketByLenRandomBatchSampler(torch.utils.data.Sampler):
     def __len__(self):
         return self.nbatches
 
-def make_data_loader(dset, collate_fn, batch_size=32, max_len=None, max_size=None, bucket_size=None, complete_only=False):
+def make_data_loader(dset, collate_fn, batch_size=32, max_len=None, max_size=None, bucket_size=None, complete_only=False, remove_empty=True):
     """
     create a DataLoader for ProteinNet datasets
 
@@ -118,6 +118,10 @@ def make_data_loader(dset, collate_fn, batch_size=32, max_len=None, max_size=Non
         max_size: only include first max_size elements of dataset
         bucket_size: size of buckets used by BucketByLenRandomBatchSampler
     """
+
+    if remove_empty:
+        indices = torch.tensor([i for i, x in enumerate(dset) if not (~x["mask"]).all()])
+        dset = Subset(dset, indices)
 
     if complete_only:
         indices = torch.tensor([i for i, x in enumerate(dset) if x["mask"].all()])

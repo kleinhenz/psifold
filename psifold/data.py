@@ -180,10 +180,15 @@ def run_tm_score(seq, ca_coords, ca_coords_ref, tmscore_path="TMscore"):
         proc = subprocess.run([tmscore_path, "model.pdb", "native.pdb"], cwd=tmpdirname, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     s = proc.stdout.decode()
-    tm_score = float(re.search("TM-score\s*=\s*(\d+\.\d*)", s)[1])
-    gdt_ts_score = float(re.search("GDT-TS-score\s*=\s*(\d+\.\d*)", s)[1])
-    rmsd = float(re.search("RMSD of  the common residues\s*=\s*(\d+\.\d*)", s)[1])
+    out = {"stdout" : s}
 
-    out = {"tm" : tm_score, "gdt_ts" : gdt_ts_score, "rmsd" : rmsd, "stdout" : s}
+    tm_score = re.search("TM-score\s*=\s*(\d+\.\d*)", s)
+    if tm_score: out["tm"] = float(tm_score[1])
+
+    gdt_ts_score = re.search("GDT-TS-score\s*=\s*(\d+\.\d*)", s)
+    if gdt_ts_score: out["gdt_ts"] = float(gdt_ts_score[1])
+
+    rmsd = re.search("RMSD of  the common residues\s*=\s*(\d+\.\d*)", s)
+    if rmsd: out["rmsd"] = float(rmsd[1])
 
     return out

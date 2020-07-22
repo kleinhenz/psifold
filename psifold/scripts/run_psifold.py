@@ -183,7 +183,11 @@ def train(model, optimizer, train_dloader, device, max_grad_norm=None, output_fr
 
     return train_loss
 
-def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device, max_grad_norm=None, epochs=10, output_frequency=60, checkpoint_file="checkpoint.pt", best_val_loss=math.inf, train_loss_history = [], val_loss_history = []):
+def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device,
+        max_grad_norm=None, epochs=10, output_frequency=60,
+        best_checkpoint_path="checkpoint_best.pt", latest_checkpoint_path="checkpoint_latest.pt",
+        best_val_loss=math.inf, train_loss_history = [], val_loss_history = []):
+
     best_model_state_dict = copy.deepcopy(model.state_dict())
 
     for epoch in range(epochs):
@@ -204,22 +208,28 @@ def run_train_loop(model, optimizer, train_dloader, val_dloader_dict, device, ma
         train_loss_history.append(train_loss)
         val_loss_history.append(val_loss)
 
+        checkpoint = {
+            "model_name" : model.model_name,
+            "model_args" : model.model_args,
+            "epoch": epoch,
+            "val_loss" : val_loss,
+            "train_loss_history" : train_loss_history,
+            "val_loss_history" : val_loss_history,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            }
+
+        if latest_checkpoint_path:
+            torch.save(checkpoint, latest_checkpoint_path)
+
         # checkpoint if we improve validation loss
         if val_loss < best_val_loss:
-            print("saving checkpoint")
+            print(f"val loss improved ({best_val_loss:0.3f} -> {val_loss:0.3f})\nsaving checkpoint")
             best_val_loss = val_loss
             best_model_state_dict = copy.deepcopy(model.state_dict())
-            checkpoint = {
-                "model_name" : model.model_name,
-                "model_args" : model.model_args,
-                "epoch": epoch,
-                "val_loss" : val_loss,
-                "train_loss_history" : train_loss_history,
-                "val_loss_history" : val_loss_history,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                }
-            torch.save(checkpoint, checkpoint_file)
+
+            if best_checkpoint_path:
+                torch.save(checkpoint, best_checkpoint_path)
 
     model.load_state_dict(best_model_state_dict)
 
@@ -241,8 +251,9 @@ def main():
     parser.add_argument("--learning_rate", type=float, default=1e-3)
     parser.add_argument("--max_grad_norm", type=float, default=None)
 
-    parser.add_argument("--save_checkpoint", type=str, default="checkpoint.pt")
     parser.add_argument("--load_checkpoint", type=str, default="")
+    parser.add_argument("--latest_checkpoint_path", type=str, default="checkpoint_latest.pt")
+    parser.add_argument("--best_checkpoint_path", type=str, default="checkpoint_best.pt")
 
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--test", action="store_true")
@@ -309,7 +320,8 @@ def main():
                                max_grad_norm=args.max_grad_norm,
                                epochs=args.epochs,
                                output_frequency=60,
-                               checkpoint_file=args.save_checkpoint,
+                               best_checkpoint_path=args.best_checkpoint_path,
+                               latest_checkpoint_path=args.latest_checkpoint_path,
                                best_val_loss=best_val_loss,
                                train_loss_history=train_loss_history,
                                val_loss_history=val_loss_history)

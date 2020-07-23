@@ -1,3 +1,2 @@
-from .rgn import RGN
-from .psifold import PsiFold
-from .baseline import Baseline
+from . import rgn
+from . import psifold

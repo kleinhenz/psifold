@@ -1,11 +1,6 @@
 from .geometry import dRMSD, dRMSD_masked, internal_coords, internal_to_srf, nerf, pnerf
 from .data import make_data_loader
-from .models import RGN, PsiFold
-from .util import count_parameters
+from .util import count_parameters, to_device, group_by_class
 
-from . import geometry
-from . import data
 from . import models
 from . import scripts
-from . import test
-from . import util

@@ -4,7 +4,6 @@ import argparse
 import copy
 import datetime
 import math
-import re
 
 import numpy as np
 import h5py
@@ -14,11 +13,10 @@ from tqdm import tqdm
 import torch
 from torch import nn, optim
 import torch.nn.functional as F
-from torch.utils.data import Dataset, Subset
-from torch.nn.utils.rnn import pad_sequence, pack_sequence
 
 import psifold
-from psifold import PsiFold, make_data_loader, count_parameters, pnerf
+from psifold.models.psifold import PsiFold, PsiFoldDataset, collate_fn
+from psifold import make_data_loader, count_parameters, to_device, group_by_class, pnerf
 
 tmscore_path = "TMscore"
 
@@ -32,82 +30,6 @@ def restore_from_checkpoint(checkpoint, device):
     train_loss_history = checkpoint["train_loss_history"]
     val_loss_history = checkpoint["val_loss_history"]
     return model, optimizer, val_loss, train_loss_history, val_loss_history
-
-class PsiFoldDataset(Dataset):
-    def __init__(self, fname, section, verbose=False):
-        self.class_re = re.compile("(.*)#")
-
-        with h5py.File(fname, "r") as h5f:
-            h5dset = h5f[section][:]
-
-        N = len(h5dset)
-        r = tqdm(range(N)) if verbose else range(N)
-        self.dset = [self.read_record(h5dset[i]) for i in r]
-
-    def __len__(self):
-        return len(self.dset)
-
-    def __getitem__(self, idx):
-        return self.dset[idx]
-
-    def read_record(self, record):
-        # identifier
-        ID = record["id"]
-
-        # primary amino acid sequence (N)
-        seq = torch.from_numpy(record["primary"])
-        N = seq.size(0)
-
-        # PSSM + information content (N x 21)
-        pssm = torch.from_numpy(np.reshape(record["evolutionary"], (-1, 21), "C"))
-
-        # coordinate available (N)
-        mask = torch.from_numpy(record["mask"]).bool()
-
-        # tertiary structure (N x 3)
-        coords = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C")) / 100.0
-        coords = coords[1::3] # c-alpha only
-
-        # fill masked coords with nan to keep track
-        coords = coords.masked_fill(mask.logical_not().unsqueeze(1), float("nan"))
-
-        # srf coords (N x 3)
-        r, theta, phi = psifold.geometry.internal_coords(coords, pad=True)
-        srf = psifold.geometry.internal_to_srf(r, theta, phi)
-
-        mask = (srf == srf).all(dim=-1)
-        # always mask out first residue since we don't have full srf coords
-        mask[0] = False
-
-        out = {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords, "srf" : srf}
-
-        # extract class from id if present
-        class_match = self.class_re.match(ID)
-        if class_match: out["class"] = class_match[1]
-
-        return out
-
-def collate_fn(batch):
-    length = torch.tensor([x["seq"].size(0) for x in batch])
-    sorted_length, sorted_indices = length.sort(0, True)
-
-    ID = [batch[i]["id"] for i in sorted_indices]
-    seq = pad_sequence([batch[i]["seq"] for i in sorted_indices])
-    pssm = pad_sequence([batch[i]["pssm"] for i in sorted_indices])
-    mask = pad_sequence([batch[i]["mask"] for i in sorted_indices])
-    coords = pad_sequence([batch[i]["coords"] for i in sorted_indices], batch_first=False, padding_value=float("nan"))
-    srf = pad_sequence([batch[i]["srf"] for i in sorted_indices], batch_first=False, padding_value=float("nan"))
-
-    return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords, "srf" : srf, "length" : sorted_length}
-
-def group_by_class(dset):
-    classes = np.array([x["class"] for x in dset])
-    out = {c : Subset(dset, np.nonzero(classes == c)[0]) for c in np.unique(classes)}
-    return out
-
-def to_device(batch, device):
-    for k in ["seq", "pssm", "length", "coords", "srf", "mask"]:
-        batch[k] = batch[k].to(device)
 
 def tm_score_batch(batch, coords):
     tm_scores = {}

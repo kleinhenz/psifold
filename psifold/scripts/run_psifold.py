@@ -15,13 +15,22 @@ from torch import nn, optim
 import torch.nn.functional as F
 
 import psifold
-from psifold.models.psifold import PsiFold, PsiFoldDataset, collate_fn
+from psifold.models.psifold import PsiFoldLSTM, PsiFoldTransformerEncoder, PsiFoldDataset, collate_fn
 from psifold import make_data_loader, count_parameters, to_device, group_by_class, pnerf
 
 tmscore_path = "TMscore"
 
+def make_model(model_name, model_args):
+    if model_name == "psifold_lstm":
+        model = PsiFoldLSTM(**model_args)
+    elif model_name == "psifold_transformer_encoder":
+        model = PsiFoldTransformerEncoder(**model_args)
+    else:
+        raise Exception(f"model: {model_name} not recognized")
+    return model
+
 def restore_from_checkpoint(checkpoint, device):
-    model = PsiFold(**checkpoint["model_args"])
+    model = make_model(checkpoint["model_name"], checkpoint["model_args"])
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
@@ -180,10 +189,17 @@ def main():
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--test", action="store_true")
 
-    # rgn parameters
-    parser.add_argument("--hidden_size", type=int, default=800)
-    parser.add_argument("--n_layers", type=int, default=2)
-    parser.add_argument("--dropout", type=float, default=0.5)
+    # model parameters
+    parser.add_argument("--model", choices=["psifold_lstm", "psifold_transformer_encoder"], default="psifold_lstm")
+    parser.add_argument("--lstm_hidden_size", type=int, default=800)
+    parser.add_argument("--lstm_n_layers", type=int, default=2)
+    parser.add_argument("--lstm_dropout", type=float, default=0.5)
+
+    parser.add_argument("--trenc_hidden_size", type=int, default=256)
+    parser.add_argument("--trenc_ff_dim", type=int, default=512)
+    parser.add_argument("--trenc_nhead", type=int, default=8)
+    parser.add_argument("--trenc_n_layers", type=int, default=3)
+    parser.add_argument("--trenc_dropout", type=float, default=0.1)
 
     args = parser.parse_args()
     print("running run_psifold...")
@@ -215,20 +231,31 @@ def main():
         test_dset_groups = group_by_class(test_dset)
         test_dloader_dict = {k : make_data_loader(v, collate_fn, batch_size=args.batch_size) for k, v in test_dset_groups.items()}
 
-    model_args = {"hidden_size" : args.hidden_size, "n_layers" : args.n_layers, "dropout" : args.dropout}
+    if args.model == "psifold_lstm":
+        model_args = {"hidden_size" : args.lstm_hidden_size,
+                      "n_layers" : args.lstm_n_layers,
+                      "dropout" : args.lstm_dropout}
+
+    elif args.model == "psifold_transformer_encoder":
+        model_args = {"hidden_size" : args.trenc_hidden_size,
+                      "ff_dim" : args.trenc_ff_dim,
+                      "nhead" : args.trenc_nhead,
+                      "n_layers" : args.trenc_n_layers,
+                      "dropout" : args.trenc_dropout}
 
     if args.load_checkpoint:
         print(f"restoring state from {args.load_checkpoint}")
         checkpoint = torch.load(args.load_checkpoint, map_location=device)
         model, optimizer, best_val_loss, train_loss_history, val_loss_history = restore_from_checkpoint(checkpoint, device)
     else:
-        model = PsiFold(**model_args)
+        model = make_model(args.model, model_args)
         model.to(device)
         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
         best_val_loss = math.inf
         train_loss_history = []
         val_loss_history = []
 
+    print(f"{model.model_name}: {model.model_args}")
     n_params = count_parameters(model)
     print(f"n_params = {n_params}")
 

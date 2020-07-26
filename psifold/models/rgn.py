@@ -15,64 +15,6 @@ from torch.nn.utils.rnn import pad_sequence, pack_sequence, pack_padded_sequence
 import psifold
 from psifold.geometry import pnerf, torsion_to_srf
 
-class RGNDataset(Dataset):
-    def __init__(self, fname, section, verbose=False):
-        self.class_re = re.compile("(.*)#")
-
-        with h5py.File(fname, "r") as h5f:
-            h5dset = h5f[section][:]
-
-        N = len(h5dset)
-        r = tqdm(range(N)) if verbose else range(N)
-        self.dset = [self.read_record(h5dset[i]) for i in r]
-
-    def __len__(self):
-        return len(self.dset)
-
-    def __getitem__(self, idx):
-        return self.dset[idx]
-
-    def read_record(self, record):
-        # identifier
-        ID = record["id"]
-
-        # primary amino acid sequence (N)
-        seq = torch.from_numpy(record["primary"])
-        N = seq.size(0)
-
-        # PSSM + information content (N x 21)
-        pssm = torch.from_numpy(np.reshape(record["evolutionary"], (-1, 21), "C"))
-
-        # coordinate available (3N)
-        mask = torch.from_numpy(record["mask"]).bool().repeat_interleave(3)
-
-        # tertiary structure (3N x 3)
-        coords = torch.from_numpy(np.reshape(record["tertiary"], (-1, 3), "C"))
-
-        # alpha carbon only
-        if coords[0::3].eq(0).all() and coords[2::3].eq(0).all():
-            mask = torch.logical_and(mask, torch.tensor([False, True, False]).repeat(N))
-
-        out = {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords}
-
-        # extract class from id if present
-        class_match = self.class_re.match(ID)
-        if class_match: out["class"] = class_match[1]
-
-        return out
-
-def collate_fn(batch):
-    length = torch.tensor([x["seq"].size(0) for x in batch])
-    sorted_length, sorted_indices = length.sort(0, True)
-
-    ID = [batch[i]["id"] for i in sorted_indices]
-    seq = pad_sequence([batch[i]["seq"] for i in sorted_indices])
-    pssm = pad_sequence([batch[i]["pssm"] for i in sorted_indices])
-    mask = pad_sequence([batch[i]["mask"] for i in sorted_indices])
-    coords = pad_sequence([batch[i]["coords"] for i in sorted_indices])
-
-    return {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords, "length" : sorted_length}
-
 class RGN(nn.Module):
     """
     Recurrent Geometric Network implementation
@@ -115,12 +57,10 @@ class RGN(nn.Module):
         self.bond_angles = nn.Parameter(torch.tensor([1.019982,1.204710,1.109421]))
         self.bond_angles.requires_grad = False
 
-    def forward(self, seq, pssm, length):
-        """
-        seq: (L x B)
-        pssm: (L x B x 21)
-        length: (L,)
-        """
+    def forward(self, batch):
+        seq = batch["seq"] # (L x B)
+        pssm = batch["pssm"] # (L x B x 21)
+        length = batch["length"] # (L,)
 
         L, B = seq.size()
 

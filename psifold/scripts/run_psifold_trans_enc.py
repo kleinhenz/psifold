@@ -25,7 +25,7 @@ tmscore_path = "TMscore"
 
 def restore_from_checkpoint(checkpoint, device):
     assert checkpoint["model_name"] == "psifold_transformer_encoder"
-    model = PsiFoldLSTM(**checkpoint["model_args"])
+    model = PsiFoldTransformerEncoder(**checkpoint["model_args"])
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)

@@ -92,8 +92,8 @@ def run_train_loop(model, criterion, optimizer, train_dloader, val_dloader_dict,
         print("test tm-scores by subgroup:")
         for group, tm_scores in tm_scores_by_group.items():
             scores = np.array(list(tm_scores.values()))
-            q = np.quantile(scores, [0.25, 0.5, 0.75])
-            print(f"{group}: {q[0]:0.2f}-{q[1]:0.2f}-{q[2]:0.2f}")
+            q = np.quantile(scores, [0.0, 0.25, 0.5, 0.75, 1.0])
+            print(f"{group}: {q[0]:0.2f}-{q[1]:0.2f}-{q[2]:0.2f}-{q[2]:0.2f}-{q[2]:0.2f}")
 
         train_loss_history.append(train_loss)
         val_loss_history.append(val_loss)

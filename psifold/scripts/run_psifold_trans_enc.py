@@ -115,6 +115,7 @@ def main():
                                          complete_only=args.complete_only)
         val_dset = PsiFoldDataset(args.input_file, args.val_section, verbose=True)
         val_dset_groups = group_by_class(val_dset)
+        val_dset_groups["train"] = torch.utils.data.Subset(train_dset, torch.randperm(len(train_dset))[:32])
         val_dloader_dict = {k : make_data_loader(v, collate_fn, batch_size=args.batch_size) for k, v in val_dset_groups.items()}
 
     if args.test:

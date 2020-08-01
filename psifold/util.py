@@ -73,10 +73,22 @@ def train(model, criterion, optimizer, train_dloader, device, max_grad_norm=None
 
     return train_loss
 
-def run_train_loop(model, criterion, optimizer, train_dloader, val_dloader_dict, device,
-        compute_tm, max_grad_norm=None, epochs=10, output_frequency=60,
-        best_checkpoint_path="checkpoint_best.pt", latest_checkpoint_path="checkpoint_latest.pt",
-        best_val_loss=math.inf, train_loss_history = [], val_loss_history = []):
+def run_train_loop(model,
+        criterion,
+        optimizer,
+        train_dloader,
+        val_dloader_dict,
+        device,
+        compute_tm,
+        max_grad_norm=None,
+        epochs=10,
+        output_frequency=60,
+        best_checkpoint_path="checkpoint_best.pt",
+        latest_checkpoint_path="checkpoint_latest.pt",
+        checkpoint_extra_data=None,
+        best_val_loss=math.inf,
+        train_loss_history = [],
+        val_loss_history = []):
 
     best_model_state_dict = copy.deepcopy(model.state_dict())
 
@@ -105,8 +117,10 @@ def run_train_loop(model, criterion, optimizer, train_dloader, val_dloader_dict,
             "val_loss" : val_loss,
             "train_loss_history" : train_loss_history,
             "val_loss_history" : val_loss_history,
+            "tm_scores" : tm_scores_by_group,
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
+            "extra" : checkpoint_extra_data
             }
 
         if latest_checkpoint_path:

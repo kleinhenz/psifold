@@ -140,6 +140,7 @@ def main():
 
     if args.train:
         print("entering training loop...")
+        checkpoint_extra_data = {"args" : vars(args)}
         model = run_train_loop(model,
                                criterion,
                                optimizer,
@@ -152,6 +153,7 @@ def main():
                                output_frequency=60,
                                best_checkpoint_path=args.best_checkpoint_path,
                                latest_checkpoint_path=args.latest_checkpoint_path,
+                               checkpoint_extra_data=checkpoint_extra_data,
                                best_val_loss=best_val_loss,
                                train_loss_history=train_loss_history,
                                val_loss_history=val_loss_history)

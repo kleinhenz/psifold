@@ -18,14 +18,41 @@ import torch.nn.functional as F
 import psifold
 from psifold import make_data_loader, count_parameters, group_by_class, pnerf
 from psifold.models.psifold_trans_enc import PsiFoldTransformerEncoder
+from psifold.models.psifold_lstm import PsiFoldLSTM
+from psifold.models.baseline import Baseline
 from psifold.data import PsiFoldDataset
 from psifold.util import validate, train, run_train_loop
 
 tmscore_path = "TMscore"
 
+def make_transformer(args):
+    model_args = {"hidden_size" : args.hidden_size, "ff_dim" : args.ff_dim, "nhead" : args.nhead, "n_layers" : args.n_layers, "dropout" : args.dropout}
+    model = PsiFoldTransformerEncoder(**model_args)
+    return model
+
+def make_lstm(args):
+    model_args = {"hidden_size" : args.hidden_size, "n_layers" : args.n_layers, "dropout" : args.dropout}
+    model = PsiFoldLSTM(**model_args)
+    return model
+
+def make_baseline(args):
+    model_args = {"hidden_size" : args.hidden_size, "n_layers" : args.n_layers, "dropout" : args.dropout}
+    model = Baseline(**model_args)
+    return model
+
 def restore_from_checkpoint(checkpoint, device):
-    assert checkpoint["model_name"] == "psifold_transformer_encoder"
-    model = PsiFoldTransformerEncoder(**checkpoint["model_args"])
+    model_name == checkpoint["model_name"]
+    model_args = checkpoint["model_args"]
+
+    if model_name == "psifold_transformer_encoder":
+        model = PsiFoldTransformerEncoder(**model_args)
+    elif model_name == "psifold_lstm":
+        model = PsiFoldLSTM(**model_args)
+    elif model_name == "baseline":
+        model = Baseline(**model_args)
+    else:
+        assert False
+
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
@@ -84,12 +111,29 @@ def main():
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--test", action="store_true")
 
+    subparsers = parser.add_subparsers()
+
+    transformer_parser = subparsers.add_parser("transformer")
+    lstm_parser = subparsers.add_parser("lstm")
+    baseline_parser = subparsers.add_parser("baseline")
+
     # model parameters
-    parser.add_argument("--hidden_size", type=int, default=512)
-    parser.add_argument("--ff_dim", type=int, default=2048)
-    parser.add_argument("--nhead", type=int, default=8)
-    parser.add_argument("--n_layers", type=int, default=12)
-    parser.add_argument("--dropout", type=float, default=0.1)
+    transformer_parser.add_argument("--hidden_size", type=int, default=512)
+    transformer_parser.add_argument("--ff_dim", type=int, default=2048)
+    transformer_parser.add_argument("--nhead", type=int, default=8)
+    transformer_parser.add_argument("--n_layers", type=int, default=12)
+    transformer_parser.add_argument("--dropout", type=float, default=0.1)
+    transformer_parser.set_defaults(make_model=make_transformer)
+
+    lstm_parser.add_argument("--hidden_size", type=int, default=800)
+    lstm_parser.add_argument("--n_layers", type=int, default=2)
+    lstm_parser.add_argument("--dropout", type=float, default=0.5)
+    lstm_parser.set_defaults(make_model=make_lstm)
+
+    baseline_parser.add_argument("--hidden_size", type=int, default=512)
+    baseline_parser.add_argument("--n_layers", type=int, default=2)
+    baseline_parser.add_argument("--dropout", type=float, default=0.1)
+    baseline_parser.set_defaults(make_model=make_baseline)
 
     args = parser.parse_args()
     print("running run_psifold...")
@@ -128,8 +172,7 @@ def main():
         checkpoint = torch.load(args.load_checkpoint, map_location=device)
         model, optimizer, best_val_loss, train_loss_history, val_loss_history = restore_from_checkpoint(checkpoint, device)
     else:
-        model_args = {"hidden_size" : args.hidden_size, "ff_dim" : args.ff_dim, "nhead" : args.nhead, "n_layers" : args.n_layers, "dropout" : args.dropout}
-        model = PsiFoldTransformerEncoder(**model_args)
+        model = args.make_model(args)
         model.to(device)
         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
         best_val_loss = math.inf

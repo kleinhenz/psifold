@@ -41,7 +41,7 @@ def make_baseline(args):
     return model
 
 def restore_from_checkpoint(checkpoint, device):
-    model_name == checkpoint["model_name"]
+    model_name = checkpoint["model_name"]
     model_args = checkpoint["model_args"]
 
     if model_name == "psifold_transformer_encoder":

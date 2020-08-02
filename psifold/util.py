@@ -105,7 +105,7 @@ def run_train_loop(model,
         for group, tm_scores in tm_scores_by_group.items():
             scores = np.array(list(tm_scores.values()))
             q = np.quantile(scores, [0.0, 0.25, 0.5, 0.75, 1.0])
-            print(f"{group}: {q[0]:0.2f}-{q[1]:0.2f}-{q[2]:0.2f}-{q[2]:0.2f}-{q[2]:0.2f}")
+            print(f"{group}: {q[0]:0.2f}-{q[1]:0.2f}-{q[2]:0.2f}-{q[3]:0.2f}-{q[4]:0.2f}")
 
         train_loss_history.append(train_loss)
         val_loss_history.append(val_loss)

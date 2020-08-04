@@ -47,6 +47,7 @@ class PsiFoldTransformerEncoder(nn.Module):
         self.fc1 = nn.Linear(hidden_size, 3)
 
         self.radius = nn.Parameter(torch.tensor([3.806]))
+        self.radius.requires_grad = False
 
     def forward(self, batch):
         seq = batch["seq"] # (L x B)

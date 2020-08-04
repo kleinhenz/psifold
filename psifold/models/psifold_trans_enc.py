@@ -46,6 +46,8 @@ class PsiFoldTransformerEncoder(nn.Module):
 
         self.fc1 = nn.Linear(hidden_size, 3)
 
+        self.radius = nn.Parameter(torch.tensor([3.806]))
+
     def forward(self, batch):
         seq = batch["seq"] # (L x B)
         pssm = batch["pssm"] # (L x B x 21)
@@ -72,6 +74,9 @@ class PsiFoldTransformerEncoder(nn.Module):
         encoder_out = self.encoder(encoder_in, src_key_padding_mask=mask)
 
         # (L x B x 3)
-        srf = self.fc1(encoder_out)
+        x = self.fc1(encoder_out)
+
+        # (L x B x 3)
+        srf = self.radius * x / x.norm(dim=-1).unsqueeze(-1)
 
         return srf

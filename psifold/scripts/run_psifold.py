@@ -65,7 +65,9 @@ def restore_from_checkpoint(checkpoint, device):
 def criterion(srf_predict, batch):
     mask = batch["mask"]
     srf = batch["srf"]
-    loss = (srf_predict[mask] - srf[mask]).pow(2).sum(-1).sqrt().mean()
+    cos = nn.CosineSimilarity(dim=-1)
+    loss = -1.0 * cos(srf_predict[mask], srf[mask]).mean()
+#    loss = (srf_predict[mask] - srf[mask]).pow(2).sum(-1).sqrt().mean()
     return loss
 
 def compute_tm(srf_predict, batch):

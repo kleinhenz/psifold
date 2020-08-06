@@ -80,6 +80,7 @@ def run_train_loop(model,
         val_dloader_dict,
         device,
         compute_tm,
+        scheduler=None,
         max_grad_norm=None,
         epochs=10,
         output_frequency=60,
@@ -94,8 +95,11 @@ def run_train_loop(model,
 
     for epoch in range(epochs):
         start = datetime.datetime.now()
+
         train_loss = train(model, criterion, optimizer, train_dloader, device, max_grad_norm=max_grad_norm, output_frequency=output_frequency)
         val_loss, val_loss_by_group, tm_scores_by_group = validate(model, criterion, compute_tm, val_dloader_dict, device)
+        if scheduler is not None: scheduler.step()
+
         elapsed = datetime.datetime.now() - start
         print(f"epoch {epoch:d}: elapsed = {elapsed}, train loss = {train_loss:0.3f}, val loss = {val_loss:0.3f}")
 
@@ -122,6 +126,8 @@ def run_train_loop(model,
             "optimizer_state_dict": optimizer.state_dict(),
             "extra" : checkpoint_extra_data
             }
+        if scheduler is not None:
+            checkpoint["scheduler_state_dict"] = scheduler.state_dict()
 
         if latest_checkpoint_path:
             torch.save(checkpoint, latest_checkpoint_path)

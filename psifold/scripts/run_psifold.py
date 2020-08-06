@@ -57,10 +57,12 @@ def restore_from_checkpoint(checkpoint, device):
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=1.0)
+    scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
     val_loss = checkpoint["val_loss"]
     train_loss_history = checkpoint["train_loss_history"]
     val_loss_history = checkpoint["val_loss_history"]
-    return model, optimizer, val_loss, train_loss_history, val_loss_history
+    return model, optimizer, scheduler, val_loss, train_loss_history, val_loss_history
 
 def criterion(srf_predict, batch):
     mask = batch["mask"]
@@ -106,7 +108,12 @@ def main():
     parser.add_argument("--learning_rate", type=float, default=1e-5)
     parser.add_argument("--max_grad_norm", type=float, default=None)
 
+    parser.add_argument("--lr_schedule_step_size", default=1)
+    parser.add_argument("--lr_schedule_gamma", default=1.0)
+
     parser.add_argument("--load_checkpoint", type=str, default="")
+    parser.add_argument("--reset_optim", action="store_true")
+
     parser.add_argument("--latest_checkpoint_path", type=str, default="checkpoint_latest.pt")
     parser.add_argument("--best_checkpoint_path", type=str, default="checkpoint_best.pt")
 
@@ -172,14 +179,17 @@ def main():
     if args.load_checkpoint:
         print(f"restoring state from {args.load_checkpoint}")
         checkpoint = torch.load(args.load_checkpoint, map_location=device)
-        model, optimizer, best_val_loss, train_loss_history, val_loss_history = restore_from_checkpoint(checkpoint, device)
+        model, optimizer, scheduler, best_val_loss, train_loss_history, val_loss_history = restore_from_checkpoint(checkpoint, device)
     else:
         model = args.make_model(args)
         model.to(device)
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
         best_val_loss = math.inf
         train_loss_history = []
         val_loss_history = []
+
+    if (not args.load_checkpoint) or (args.load_checkpoint and args.reset_optim):
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_schedule_step_size, gamma=args.lr_schedule_gamma)
 
     print(f"{model.model_name}: {model.model_args}")
     n_params = count_parameters(model)
@@ -195,6 +205,7 @@ def main():
                                val_dloader_dict,
                                device,
                                compute_tm,
+                               scheduler=scheduler,
                                max_grad_norm=args.max_grad_norm,
                                epochs=args.epochs,
                                output_frequency=60,

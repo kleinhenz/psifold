@@ -25,6 +25,8 @@ from psifold.util import validate, train, run_train_loop
 
 tmscore_path = "TMscore"
 
+cosine_similarity = nn.CosineSimilarity(dim=-1)
+
 def make_transformer(args):
     model_args = {"hidden_size" : args.hidden_size, "ff_dim" : args.ff_dim, "nhead" : args.nhead, "n_layers" : args.n_layers, "dropout" : args.dropout}
     model = PsiFoldTransformerEncoder(**model_args)
@@ -67,8 +69,7 @@ def restore_from_checkpoint(checkpoint, device):
 def criterion(srf_predict, batch):
     mask = batch["mask"]
     srf = batch["srf"]
-    cos = nn.CosineSimilarity(dim=-1)
-    loss = -1.0 * cos(srf_predict[mask], srf[mask]).mean()
+    loss = 1.0 - cosine_similarity(srf_predict[mask], srf[mask]).mean()
 #    loss = (srf_predict[mask] - srf[mask]).pow(2).sum(-1).sqrt().mean()
     return loss
 

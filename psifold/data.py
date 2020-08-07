@@ -54,12 +54,11 @@ class PsiFoldDataset(Dataset):
         coords = coords.masked_fill(mask.logical_not().unsqueeze(1), float("nan"))
 
         # srf coords (N x 3)
+        # note first srf coord is always fixed by padding
         r, theta, phi = psifold.geometry.internal_coords(coords, pad=True)
         srf = psifold.geometry.internal_to_srf(r, theta, phi)
 
         mask = (srf == srf).all(dim=-1)
-        # always mask out first residue since we don't have full srf coords
-        mask[0] = False
 
         out = {"id" : ID, "seq" : seq, "pssm" : pssm, "mask" : mask, "coords" : coords, "srf" : srf}
 

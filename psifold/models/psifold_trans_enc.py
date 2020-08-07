@@ -44,7 +44,7 @@ class PsiFoldTransformerEncoder(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(hidden_size, nhead=nhead, dim_feedforward=ff_dim, dropout=dropout)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
 
-        self.fc1 = nn.Linear(hidden_size, 3)
+        self.fc1 = nn.Linear(hidden_size, 2)
 
         self.radius = nn.Parameter(torch.tensor([radius]))
         self.radius.requires_grad = False
@@ -74,10 +74,29 @@ class PsiFoldTransformerEncoder(nn.Module):
         # (L x B x hidden_size)
         encoder_out = self.encoder(encoder_in, src_key_padding_mask=mask)
 
-        # (L x B x 3)
-        x = self.fc1(encoder_out)
+        # (L x B x 2)
+        angles = self.fc1(encoder_out)
+
+        # (L x B)
+        theta = angles[:,:,0]
+        phi = angles[:,:,1]
+
+        # (L x B)
+        r_cos_theta = self.radius * torch.cos(theta)
+        r_sin_theta = self.radius * torch.sin(theta)
 
         # (L x B x 3)
-        srf = self.radius * x / x.norm(dim=-1).unsqueeze(-1)
+        srf = torch.stack([r_cos_theta,
+                           r_sin_theta * torch.cos(phi),
+                           r_sin_theta * torch.sin(phi)], dim=-1)
 
         return srf
+
+#        # (L x B x 3)
+#        x = self.fc1(encoder_out)
+#
+#
+#        # (L x B x 3)
+#        srf = self.radius * x / x.norm(dim=-1).unsqueeze(-1)
+#
+#        return srf

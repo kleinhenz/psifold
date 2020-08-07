@@ -28,7 +28,7 @@ class PsiFoldTransformerEncoder(nn.Module):
     """
     PsiFold implementation
     """
-    def __init__(self, hidden_size=512, ff_dim=2048, nhead=8, n_layers=12, dropout=0.1):
+    def __init__(self, hidden_size=512, ff_dim=2048, nhead=8, n_layers=12, dropout=0.1, radius=3.806):
         super(PsiFoldTransformerEncoder, self).__init__()
 
         # save info needed to recreate model from checkpoint
@@ -46,7 +46,7 @@ class PsiFoldTransformerEncoder(nn.Module):
 
         self.fc1 = nn.Linear(hidden_size, 3)
 
-        self.radius = nn.Parameter(torch.tensor([3.806]))
+        self.radius = nn.Parameter(torch.tensor([radius]))
         self.radius.requires_grad = False
 
     def forward(self, batch):

@@ -28,7 +28,7 @@ tmscore_path = "TMscore"
 cosine_similarity = nn.CosineSimilarity(dim=-1)
 
 def make_transformer(args):
-    model_args = {"hidden_size" : args.hidden_size, "ff_dim" : args.ff_dim, "nhead" : args.nhead, "n_layers" : args.n_layers, "dropout" : args.dropout}
+    model_args = {"hidden_size" : args.hidden_size, "n_layers" : args.n_layers, "dropout" : args.dropout}
     model = PsiFoldTransformerEncoder(**model_args)
     return model
 
@@ -129,9 +129,7 @@ def main():
 
     # model parameters
     transformer_parser.add_argument("--hidden_size", type=int, default=512)
-    transformer_parser.add_argument("--ff_dim", type=int, default=2048)
-    transformer_parser.add_argument("--nhead", type=int, default=8)
-    transformer_parser.add_argument("--n_layers", type=int, default=12)
+    transformer_parser.add_argument("--n_layers", type=int, default=8)
     transformer_parser.add_argument("--dropout", type=float, default=0.1)
     transformer_parser.set_defaults(make_model=make_transformer)
 

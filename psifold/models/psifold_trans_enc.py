@@ -28,8 +28,17 @@ class PsiFoldTransformerEncoder(nn.Module):
     """
     PsiFold implementation
     """
-    def __init__(self, hidden_size=512, ff_dim=2048, nhead=8, n_layers=12, dropout=0.1, radius=3.806):
+    def __init__(self, hidden_size=512, n_layers=8, dropout=0.1, radius=3.806, ff_dim=None, nhead=None):
         super(PsiFoldTransformerEncoder, self).__init__()
+
+        # default scaling for parameters
+        # see https://arxiv.org/pdf/1908.08962.pdf
+        if ff_dim is None:
+            ff_dim = hidden_size * 4
+
+        if nhead is None:
+            assert hidden_size % 64 == 0
+            nhead = hidden_size // 64
 
         # save info needed to recreate model from checkpoint
         self.model_name = "psifold_transformer_encoder"

@@ -48,13 +48,13 @@ class RGN(nn.Module):
         u = torch.distributions.Uniform(-math.pi, math.pi)
         self.alphabet = nn.Parameter(u.rsample(torch.Size([alphabet_size, 3])))
 
-        # (N-CA, CA-C, C-N)
-        self.bond_lengths = nn.Parameter(torch.tensor([145.867432,152.534744,132.935516]))
+        # (C-N, N-CA, CA-C)
+        self.bond_lengths = nn.Parameter(100.0 * torch.tensor([1.3297, 1.4597, 1.5249]))
         self.bond_lengths.requires_grad = False
 
-        # (C-N-CA, N-CA-C, CA-C-N)
+        # (CA-C-N, C-N-CA, N-CA-C)
         # NOTE values from original rgn code given by pi - self.bond_angles
-        self.bond_angles = nn.Parameter(torch.tensor([1.019982,1.204710,1.109421]))
+        self.bond_angles = nn.Parameter(torch.tensor([1.1075, 1.0196, 1.2035]))
         self.bond_angles.requires_grad = False
 
     def forward(self, batch):

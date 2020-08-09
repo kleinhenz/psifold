@@ -102,7 +102,7 @@ def main():
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--train_size", type=int, default=None)
     parser.add_argument("--complete_only", action="store_true")
-    parser.add_argument("--max_len", type=int, default=None)
+    parser.add_argument("--max_len", type=int, default=512)
     parser.add_argument("--tmscore_path", type=str, default="TMscore")
 
     parser.add_argument("--epochs", type=int, default=10)

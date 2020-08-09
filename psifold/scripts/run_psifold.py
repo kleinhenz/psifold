@@ -107,6 +107,7 @@ def main():
 
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--learning_rate", type=float, default=1e-5)
+    parser.add_argument("--accumulate_steps", type=int, default=1)
     parser.add_argument("--max_grad_norm", type=float, default=None)
 
     parser.add_argument("--lr_schedule_step_size", default=1)
@@ -204,6 +205,7 @@ def main():
                                val_dloader_dict,
                                device,
                                compute_tm,
+                               accumulate_steps=args.accumulate_steps,
                                scheduler=scheduler,
                                max_grad_norm=args.max_grad_norm,
                                epochs=args.epochs,

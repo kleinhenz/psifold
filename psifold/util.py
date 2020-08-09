@@ -48,29 +48,33 @@ def validate(model, criterion, compute_tm, val_dloader_dict, device):
 
     return val_loss, val_loss_by_group, tm_scores_by_group
 
-def train(model, criterion, optimizer, train_dloader, device, max_grad_norm=None, output_frequency = 60):
+def train(model, criterion, optimizer, dloader, device, accumulate_steps=1, max_grad_norm=None, output_frequency = 60):
     model.train()
     train_loss = 0.0
 
     last_output = datetime.datetime.now()
-    for batch_idx, batch in enumerate(train_dloader):
-        to_device(batch, device)
-        out = model(batch)
+
+    dloader_iter = iter(dloader)
+    super_batches = torch.arange(len(dloader)).split(accumulate_steps)
+
+    for super_batch_idx, super_batch in enumerate(super_batches):
+        N = len(super_batch)
         optimizer.zero_grad()
-        loss = criterion(out, batch)
-        loss.backward()
+        for _, batch in zip(range(N), dloader_iter):
+            to_device(batch, device)
+            out = model(batch)
+            loss = criterion(out, batch) / N
+            loss.backward()
+            train_loss += loss.item()
 
         if max_grad_norm: nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
-
-        train_loss += loss.item()
         optimizer.step()
 
         if ((datetime.datetime.now() - last_output).seconds > output_frequency):
             last_output = datetime.datetime.now()
-            print(f"batch {batch_idx}/{len(train_dloader)}")
+            print(f"batch {super_batch_idx}/{len(super_batches)}")
 
-    train_loss /= len(train_dloader)
-
+    train_loss /= len(super_batches)
     return train_loss
 
 def run_train_loop(model,
@@ -80,6 +84,7 @@ def run_train_loop(model,
         val_dloader_dict,
         device,
         compute_tm,
+        accumulate_steps=1,
         scheduler=None,
         max_grad_norm=None,
         epochs=10,
@@ -96,7 +101,7 @@ def run_train_loop(model,
     for epoch in range(epochs):
         start = datetime.datetime.now()
 
-        train_loss = train(model, criterion, optimizer, train_dloader, device, max_grad_norm=max_grad_norm, output_frequency=output_frequency)
+        train_loss = train(model, criterion, optimizer, train_dloader, device, accumulate_steps=accumulate_steps, max_grad_norm=max_grad_norm, output_frequency=output_frequency)
         val_loss, val_loss_by_group, tm_scores_by_group = validate(model, criterion, compute_tm, val_dloader_dict, device)
         if scheduler is not None: scheduler.step()
 

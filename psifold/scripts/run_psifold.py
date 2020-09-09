@@ -22,6 +22,7 @@ from psifold.models.psifold_lstm import PsiFoldLSTM
 from psifold.models.baseline import Baseline
 from psifold.data import PsiFoldDataset
 from psifold.util import validate, train, run_train_loop
+from psifold.optimization import poly_schedule, Lamb
 
 tmscore_path = "TMscore"
 
@@ -57,7 +58,7 @@ def restore_from_checkpoint(checkpoint, device):
 
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = Lamb(model.parameters())
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=1.0)
     scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
@@ -106,12 +107,11 @@ def main():
     parser.add_argument("--tmscore_path", type=str, default="TMscore")
 
     parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--learning_rate", type=float, default=1e-5)
-    parser.add_argument("--accumulate_steps", type=int, default=1)
-    parser.add_argument("--max_grad_norm", type=float, default=None)
-
-    parser.add_argument("--lr_schedule_step_size", default=1)
-    parser.add_argument("--lr_schedule_gamma", default=1.0)
+    parser.add_argument("--learning_rate", type=float, default=1e-3)
+    parser.add_argument("--accumulate_steps", type=int, default=4)
+    parser.add_argument("--warmup_steps", type=int, default=1024)
+    parser.add_argument("--max_grad_norm", type=float, default=1.0)
+    parser.add_argument("--enable_amp", action="store_true")
 
     parser.add_argument("--load_checkpoint", type=str, default="")
     parser.add_argument("--reset_optim", action="store_true")
@@ -188,8 +188,12 @@ def main():
         val_loss_history = []
 
     if (not args.load_checkpoint) or (args.load_checkpoint and args.reset_optim):
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_schedule_step_size, gamma=args.lr_schedule_gamma)
+        optimizer = Lamb(model.parameters(), lr=args.learning_rate)
+        n_steps = args.epochs * len(train_dloader)
+        warmup_frac = args.warmup_steps / n_steps
+        schedule_f = poly_schedule(warmup=warmup_frac, degree=1.0)
+        f = lambda step : schedule_f(step/n_steps)
+        scheduler = optim.lr_scheduler.LambdaLR(optimizer, f)
 
     print(f"{model.model_name}: {model.model_args}")
     n_params = count_parameters(model)
@@ -201,13 +205,14 @@ def main():
         model = run_train_loop(model,
                                criterion,
                                optimizer,
+                               scheduler,
                                train_dloader,
                                val_dloader_dict,
                                device,
                                compute_tm,
                                accumulate_steps=args.accumulate_steps,
-                               scheduler=scheduler,
                                max_grad_norm=args.max_grad_norm,
+                               enable_amp=args.enable_amp,
                                epochs=args.epochs,
                                output_frequency=60,
                                best_checkpoint_path=args.best_checkpoint_path,

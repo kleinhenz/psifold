@@ -5,6 +5,9 @@ import math
 import numpy as np
 
 import torch
+
+from torch import nn, optim
+from torch.cuda import amp
 from torch.utils.data import Dataset, Subset
 
 def count_parameters(model):
@@ -48,7 +51,7 @@ def validate(model, criterion, compute_tm, val_dloader_dict, device):
 
     return val_loss, val_loss_by_group, tm_scores_by_group
 
-def train(model, criterion, optimizer, dloader, device, accumulate_steps=1, max_grad_norm=None, output_frequency = 60):
+def train(model, criterion, optimizer, scheduler, scaler, dloader, device, accumulate_steps=1, max_grad_norm=None, enable_amp=False, output_frequency = 60):
     model.train()
     train_loss = 0.0
 
@@ -62,13 +65,19 @@ def train(model, criterion, optimizer, dloader, device, accumulate_steps=1, max_
         optimizer.zero_grad()
         for _, batch in zip(range(N), dloader_iter):
             to_device(batch, device)
-            out = model(batch)
-            loss = criterion(out, batch) / N
-            loss.backward()
+
+            with amp.autocast(enabled=enable_amp):
+                out = model(batch)
+                loss = criterion(out, batch) / N
+
+            scaler.scale(loss).backward()
             train_loss += loss.item()
 
         if max_grad_norm: nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
-        optimizer.step()
+
+        scaler.step(optimizer)
+        scaler.update()
+        scheduler.step()
 
         if ((datetime.datetime.now() - last_output).seconds > output_frequency):
             last_output = datetime.datetime.now()
@@ -80,13 +89,14 @@ def train(model, criterion, optimizer, dloader, device, accumulate_steps=1, max_
 def run_train_loop(model,
         criterion,
         optimizer,
+        scheduler,
         train_dloader,
         val_dloader_dict,
         device,
         compute_tm,
         accumulate_steps=1,
-        scheduler=None,
         max_grad_norm=None,
+        enable_amp=False,
         epochs=10,
         output_frequency=60,
         best_checkpoint_path="checkpoint_best.pt",
@@ -97,13 +107,24 @@ def run_train_loop(model,
         val_loss_history = []):
 
     best_model_state_dict = copy.deepcopy(model.state_dict())
+    scaler = amp.GradScaler()
 
     for epoch in range(epochs):
         start = datetime.datetime.now()
 
-        train_loss = train(model, criterion, optimizer, train_dloader, device, accumulate_steps=accumulate_steps, max_grad_norm=max_grad_norm, output_frequency=output_frequency)
+        train_loss = train(model,
+                criterion,
+                optimizer,
+                scheduler,
+                scaler,
+                train_dloader,
+                device,
+                accumulate_steps=accumulate_steps,
+                max_grad_norm=max_grad_norm,
+                enable_amp=enable_amp,
+                output_frequency=output_frequency)
+
         val_loss, val_loss_by_group, tm_scores_by_group = validate(model, criterion, compute_tm, val_dloader_dict, device)
-        if scheduler is not None: scheduler.step()
 
         elapsed = datetime.datetime.now() - start
         print(f"epoch {epoch:d}: elapsed = {elapsed}, train loss = {train_loss:0.3f}, val loss = {val_loss:0.3f}")
@@ -129,10 +150,9 @@ def run_train_loop(model,
             "tm_scores" : tm_scores_by_group,
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
+            "scheduler_state_dict" : scheduler.state_dict(),
             "extra" : checkpoint_extra_data
-            }
-        if scheduler is not None:
-            checkpoint["scheduler_state_dict"] = scheduler.state_dict()
+        }
 
         if latest_checkpoint_path:
             torch.save(checkpoint, latest_checkpoint_path)

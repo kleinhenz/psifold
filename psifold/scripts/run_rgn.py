@@ -133,6 +133,9 @@ def main():
         train_loss_history = []
         val_loss_history = []
 
+    f = lambda step : 1.0
+    scheduler = optim.lr_scheduler.LambdaLR(optimizer, f)
+
     print(f"{model.model_name}: {model.model_args}")
     n_params = count_parameters(model)
     print(f"n_params = {n_params}")
@@ -143,6 +146,7 @@ def main():
         model = run_train_loop(model,
                                criterion,
                                optimizer,
+                               scheduler,
                                train_dloader,
                                val_dloader_dict,
                                device,

@@ -60,8 +60,15 @@ def restore_from_checkpoint(checkpoint, device):
     model.to(device)
     optimizer = Lamb(model.parameters())
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=1.0)
+
+    n_steps = checkpoint["extra"]["n_steps"]
+    warmup_steps = checkpoint["extra"]["args"]["warmup_steps"]
+    warmup_frac = warmup_steps / n_steps
+    schedule_f = poly_schedule(warmup=warmup_frac, degree=1.0)
+    f = lambda step : schedule_f(step/n_steps)
+    scheduler = optim.lr_scheduler.LambdaLR(optimizer, f)
     scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+
     val_loss = checkpoint["val_loss"]
     train_loss_history = checkpoint["train_loss_history"]
     val_loss_history = checkpoint["val_loss_history"]
@@ -179,6 +186,7 @@ def main():
         print(f"restoring state from {args.load_checkpoint}")
         checkpoint = torch.load(args.load_checkpoint, map_location=device)
         model, optimizer, scheduler, best_val_loss, train_loss_history, val_loss_history = restore_from_checkpoint(checkpoint, device)
+        epochs = checkpoint["extra"]["args"]["epochs"] - checkpoint["epoch"] - 1
     else:
         model = args.make_model(args)
         model.to(device)
@@ -186,9 +194,13 @@ def main():
         train_loss_history = []
         val_loss_history = []
 
+    checkpoint_extra_data = {"args" : vars(args)}
+
     if (not args.load_checkpoint) or (args.load_checkpoint and args.reset_optim):
         optimizer = Lamb(model.parameters(), lr=args.learning_rate)
-        n_steps = args.epochs * len(train_dloader)
+        epochs = args.epochs
+        n_steps = (epochs * len(train_dloader) + args.accumulate_steps - 1) // args.accumulate_steps
+        checkpoint_extra_data["n_steps"] = n_steps
         warmup_frac = args.warmup_steps / n_steps
         schedule_f = poly_schedule(warmup=warmup_frac, degree=1.0)
         f = lambda step : schedule_f(step/n_steps)
@@ -200,7 +212,6 @@ def main():
 
     if args.train:
         print("entering training loop...")
-        checkpoint_extra_data = {"args" : vars(args)}
         model = run_train_loop(model,
                                criterion,
                                optimizer,
@@ -212,7 +223,7 @@ def main():
                                accumulate_steps=args.accumulate_steps,
                                max_grad_norm=args.max_grad_norm,
                                enable_amp=args.enable_amp,
-                               epochs=args.epochs,
+                               epochs=epochs,
                                output_frequency=60,
                                checkpoint_path=args.checkpoint_path,
                                checkpoint_extra_data=checkpoint_extra_data,

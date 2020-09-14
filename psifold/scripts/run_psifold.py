@@ -116,8 +116,7 @@ def main():
     parser.add_argument("--load_checkpoint", type=str, default="")
     parser.add_argument("--reset_optim", action="store_true")
 
-    parser.add_argument("--latest_checkpoint_path", type=str, default="checkpoint_latest.pt")
-    parser.add_argument("--best_checkpoint_path", type=str, default="checkpoint_best.pt")
+    parser.add_argument("--checkpoint_path", type=str, default="checkpoints")
 
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--test", action="store_true")
@@ -215,8 +214,7 @@ def main():
                                enable_amp=args.enable_amp,
                                epochs=args.epochs,
                                output_frequency=60,
-                               best_checkpoint_path=args.best_checkpoint_path,
-                               latest_checkpoint_path=args.latest_checkpoint_path,
+                               checkpoint_path=args.checkpoint_path,
                                checkpoint_extra_data=checkpoint_extra_data,
                                best_val_loss=best_val_loss,
                                train_loss_history=train_loss_history,

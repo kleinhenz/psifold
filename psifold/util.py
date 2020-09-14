@@ -1,6 +1,8 @@
 import copy
 import datetime
 import math
+import pathlib
+import uuid
 
 import numpy as np
 
@@ -99,8 +101,7 @@ def run_train_loop(model,
         enable_amp=False,
         epochs=10,
         output_frequency=60,
-        best_checkpoint_path="checkpoint_best.pt",
-        latest_checkpoint_path="checkpoint_latest.pt",
+        checkpoint_path="checkpoints",
         checkpoint_extra_data=None,
         best_val_loss=math.inf,
         train_loss_history = [],
@@ -108,6 +109,11 @@ def run_train_loop(model,
 
     best_model_state_dict = copy.deepcopy(model.state_dict())
     scaler = amp.GradScaler()
+
+    workdir = pathlib.Path(checkpoint_path) / str(uuid.uuid4())
+    workdir.mkdir(parents=True)
+    latest_checkpoint_path = workdir / "latest.pt"
+    best_checkpoint_path = workdir / "best.pt"
 
     for epoch in range(epochs):
         start = datetime.datetime.now()

@@ -295,7 +295,7 @@ def make_pdb_record(seq, ca_coords):
 
     return "".join(lines)
 
-def run_tm_score(seq, ca_coords, ca_coords_ref, tmscore_path="TMscore"):
+def run_tm_score(seq, ca_coords, ca_coords_ref, tmscore_path="TMscore", timeout=1.0):
     pdb = make_pdb_record(seq, ca_coords)
     pdb_ref = make_pdb_record(seq, ca_coords_ref)
 
@@ -308,7 +308,7 @@ def run_tm_score(seq, ca_coords, ca_coords_ref, tmscore_path="TMscore"):
         with open(path_b, "w") as f:
             f.write(pdb_ref)
 
-        proc = subprocess.run([tmscore_path, "model.pdb", "native.pdb"], cwd=tmpdirname, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.run([tmscore_path, "model.pdb", "native.pdb"], cwd=tmpdirname, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 
     s = proc.stdout.decode()
     out = {"stdout" : s}

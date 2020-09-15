@@ -196,21 +196,22 @@ def main():
 
     checkpoint_extra_data = {"args" : vars(args)}
 
-    if (not args.load_checkpoint) or (args.load_checkpoint and args.reset_optim):
-        optimizer = Lamb(model.parameters(), lr=args.learning_rate)
-        epochs = args.epochs
-        n_steps = (epochs * len(train_dloader) + args.accumulate_steps - 1) // args.accumulate_steps
-        checkpoint_extra_data["n_steps"] = n_steps
-        warmup_frac = args.warmup_steps / n_steps
-        schedule_f = poly_schedule(warmup=warmup_frac, degree=1.0)
-        f = lambda step : schedule_f(step/n_steps)
-        scheduler = optim.lr_scheduler.LambdaLR(optimizer, f)
-
     print(f"{model.model_name}: {model.model_args}")
     n_params = count_parameters(model)
     print(f"n_params = {n_params}")
 
     if args.train:
+
+        if (not args.load_checkpoint) or (args.load_checkpoint and args.reset_optim):
+            optimizer = Lamb(model.parameters(), lr=args.learning_rate)
+            epochs = args.epochs
+            n_steps = (epochs * len(train_dloader) + args.accumulate_steps - 1) // args.accumulate_steps
+            checkpoint_extra_data["n_steps"] = n_steps
+            warmup_frac = args.warmup_steps / n_steps
+            schedule_f = poly_schedule(warmup=warmup_frac, degree=1.0)
+            f = lambda step : schedule_f(step/n_steps)
+            scheduler = optim.lr_scheduler.LambdaLR(optimizer, f)
+
         print("entering training loop...")
         model = run_train_loop(model,
                                criterion,

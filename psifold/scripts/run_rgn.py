@@ -160,7 +160,7 @@ def main():
                                val_loss_history=val_loss_history)
 
     if args.test:
-        test_loss, test_loss_by_group, tm_scores_by_group = validate(model, test_dloader_dict, device)
+        test_loss, test_loss_by_group, tm_scores_by_group = validate(model, criterion, compute_tm, test_dloader_dict, device)
         print("test dRMSD (A) by subgroup:\n" + "\n".join(f"{k} : {v/100:0.3f}" for k,v in test_loss_by_group.items()))
 
         print("test tm-scores by subgroup:")

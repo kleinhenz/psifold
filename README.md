@@ -1,6 +1,6 @@
 # PsiFold
 
-PsiFold is python module for protein structure prediction.
+PsiFold is a pytorch implementation of the [RGN](https://doi.org/10.1016/j.cels.2019.03.006) method for protein structure prediction as well as several variants.
 
 # Installation
 ```
@@ -10,7 +10,7 @@ pip install -e .
 ```
 
 # Usage
-The following commands download the [ProteinNet](https://github.com/aqlaboratory/proteinnet) casp7 dataset and trains a lstm psifold model for 5 epochs.
+The following commands download the [ProteinNet](https://github.com/aqlaboratory/proteinnet) casp7 dataset and trains a rgn model for 5 epochs.
 ```
 # download tensorflow records
 curl -LO "https://sharehost.hms.harvard.edu/sysbio/alquraishi/proteinnet/tfrecords/casp7.tar.gz"
@@ -22,19 +22,22 @@ proteinnet2hdf --output="casp7.h5" casp7
 # tensorflow records are no longer needed
 rm -r casp7 casp7.tar.gz
 
-# train lstm model
-run_psifold --train \
-            --input.file=casp7.h5 \
-            --train.section=/training/90 \
-            --batch_size=32 \
-            --epochs=5 \
-            --learning_rate=1e-3 \
-            lstm
+# train rgn model
+run_rgn --train \
+        --input.file=casp7.h5 \
+        --train.section=/training/90 \
+        --batch_size=32 \
+        --epochs=5 \
+        --learning_rate=1e-3
 
 # evaluate the model
 # choose --test.section="/testing" to evaluate the test set
-run_psifold --test \
-            --input.file=casp7.h5 \
-            --load_checkpoint=checkpoint_best.pt \
-            --test.section=/validation
+run_rgn --test \
+        --input.file=casp7.h5 \
+        --load_checkpoint=checkpoint_best.pt \
+        --test.section=/validation
 ```
+
+# Variants
+PsiFold also implements a variant of the RGN method which uses a transformer encoder stack (like BERT) to replace the LSTM and replaces the dRMSD loss with a local cosine similarity loss on the alpha carbon SRF coordinates.
+Given the recent advances in NLP from transformers this seems like an interesting idea, but so far I have been unable to train a good model.

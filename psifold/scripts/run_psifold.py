@@ -129,7 +129,8 @@ def main():
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--test", action="store_true")
 
-    subparsers = parser.add_subparsers(dest="cmd", required=True)
+    subparsers = parser.add_subparsers(dest="cmd")
+    subparsers.required = True
 
     transformer_parser = subparsers.add_parser("transformer")
     lstm_parser = subparsers.add_parser("lstm")

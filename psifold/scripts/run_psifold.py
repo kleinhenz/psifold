@@ -81,7 +81,7 @@ def criterion(srf_predict, batch):
 #    loss = (srf_predict[mask] - srf[mask]).pow(2).sum(-1).sqrt().mean()
     return loss
 
-def compute_tm(srf_predict, batch):
+def compute_tm_f(srf_predict, batch):
     coords = pnerf(srf_predict, nfrag=int(math.sqrt(batch["seq"].size(0))))
 
     tm_scores = {}
@@ -112,6 +112,7 @@ def main():
     parser.add_argument("--complete_only", action="store_true")
     parser.add_argument("--max_len", type=int, default=512)
     parser.add_argument("--tmscore_path", type=str, default="TMscore")
+    parser.add_argument("--compute_tm", action="store_true")
 
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--learning_rate", type=float, default=1e-3)
@@ -128,7 +129,7 @@ def main():
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--test", action="store_true")
 
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest="cmd", required=True)
 
     transformer_parser = subparsers.add_parser("transformer")
     lstm_parser = subparsers.add_parser("lstm")
@@ -152,13 +153,18 @@ def main():
 
     args = parser.parse_args()
     print("running run_psifold...")
-    print("args:", vars(args))
+    for k,v in vars(args).items():
+        print(f"{k}: {v}")
 
     global tmscore_path
     tmscore_path = args.tmscore_path
+    if args.compute_tm:
+        compute_tm = compute_tm_f
+    else:
+        compute_tm = None
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(device)
+    print(f"device = {device}")
     if torch.cuda.is_available(): print(torch.cuda.get_device_name())
 
     print("loading data...")
@@ -233,14 +239,17 @@ def main():
                                val_loss_history=val_loss_history)
 
     if args.test:
-        test_loss, test_loss_by_group, tm_scores_by_group = validate(model, criterion, compute_tm, test_dloader_dict, device)
+        test_data = validate(model, criterion, compute_tm, test_dloader_dict, device)
+        test_loss, test_loss_by_group = test_data["loss"], test_data["loss_by_group"]
         print("test loss (A) by subgroup:\n" + "\n".join(f"{k} : {v:0.3f}" for k,v in test_loss_by_group.items()))
 
-        print("test tm-scores by subgroup:")
-        for group, tm_scores in tm_scores_by_group.items():
-            scores = np.array(list(tm_scores.values()))
-            q = np.quantile(scores, [0.0, 0.25, 0.5, 0.75, 1.0])
-            print(f"{group}: {q[0]:0.2f}-{q[1]:0.2f}-{q[2]:0.2f}-{q[3]:0.2f}-{q[4]:0.2f}")
+        if compute_tm:
+            tm_scores_by_group = test_data["tm_scores_by_group"]
+            print("test tm-scores by subgroup:")
+            for group, tm_scores in tm_scores_by_group.items():
+                scores = np.array(list(tm_scores.values()))
+                q = np.quantile(scores, [0.0, 0.25, 0.5, 0.75, 1.0])
+                print(f"{group}: {q[0]:0.2f}-{q[1]:0.2f}-{q[2]:0.2f}-{q[3]:0.2f}-{q[4]:0.2f}")
 
 if __name__ == "__main__":
     main()

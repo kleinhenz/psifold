@@ -43,7 +43,8 @@ def validate(model, criterion, compute_tm, val_dloader_dict, device):
                 val_loss += loss.item()
                 val_loss_group += loss.item()
 
-                tm_scores_group.update(compute_tm(out, batch))
+                if compute_tm:
+                    tm_scores_group.update(compute_tm(out, batch))
 
             val_loss_by_group[group] = val_loss_group / len(dloader)
             tm_scores_by_group[group] = tm_scores_group
@@ -51,7 +52,11 @@ def validate(model, criterion, compute_tm, val_dloader_dict, device):
     N = sum(len(dloader) for group, dloader in val_dloader_dict.items())
     val_loss /= N
 
-    return val_loss, val_loss_by_group, tm_scores_by_group
+    out = {"loss" : val_loss, "loss_by_group" : val_loss_by_group}
+    if compute_tm:
+        out["tm_scores_by_group"] = tm_scores_by_group
+
+    return out
 
 def train(model, criterion, optimizer, scheduler, scaler, dloader, device, accumulate_steps=1, max_grad_norm=None, enable_amp=False, output_frequency = 60):
     model.train()
@@ -130,18 +135,21 @@ def run_train_loop(model,
                 enable_amp=enable_amp,
                 output_frequency=output_frequency)
 
-        val_loss, val_loss_by_group, tm_scores_by_group = validate(model, criterion, compute_tm, val_dloader_dict, device)
+        val_data = validate(model, criterion, compute_tm, val_dloader_dict, device)
+        val_loss, val_loss_by_group = val_data["loss"], val_data["loss_by_group"]
 
         elapsed = datetime.datetime.now() - start
         print(f"epoch {epoch:d}: elapsed = {elapsed}, train loss = {train_loss:0.3f}, val loss = {val_loss:0.3f}")
 
         print("val loss (A) by subgroup:\n" + "\n".join(f"{k} : {v:0.3f}" for k,v in val_loss_by_group.items()))
 
-        print("test tm-scores by subgroup:")
-        for group, tm_scores in tm_scores_by_group.items():
-            scores = np.array(list(tm_scores.values()))
-            q = np.quantile(scores, [0.0, 0.25, 0.5, 0.75, 1.0])
-            print(f"{group}: {q[0]:0.2f}-{q[1]:0.2f}-{q[2]:0.2f}-{q[3]:0.2f}-{q[4]:0.2f}")
+        if compute_tm:
+            tm_scores_by_group = val_data["tm_scores_by_group"]
+            print("test tm-scores by subgroup:")
+            for group, tm_scores in tm_scores_by_group.items():
+                scores = np.array(list(tm_scores.values()))
+                q = np.quantile(scores, [0.0, 0.25, 0.5, 0.75, 1.0])
+                print(f"{group}: {q[0]:0.2f}-{q[1]:0.2f}-{q[2]:0.2f}-{q[3]:0.2f}-{q[4]:0.2f}")
 
         train_loss_history.append(train_loss)
         val_loss_history.append(val_loss)
@@ -153,12 +161,13 @@ def run_train_loop(model,
             "val_loss" : val_loss,
             "train_loss_history" : train_loss_history,
             "val_loss_history" : val_loss_history,
-            "tm_scores" : tm_scores_by_group,
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict" : scheduler.state_dict(),
             "extra" : checkpoint_extra_data
         }
+        if compute_tm:
+            checkpoint["tm_scores_by_group"] = tm_scores_by_group
 
         if latest_checkpoint_path:
             torch.save(checkpoint, latest_checkpoint_path)

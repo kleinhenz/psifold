@@ -9,7 +9,7 @@ pip install git+ssh://git@github.com/kleinhenz/psifold.git
 
 # Usage
 The following script downloads the [ProteinNet](https://doi.org/10.1186/s12859-019-2932-0) casp7 dataset, trains a RGN model for 5 epochs, and evaluates the trained model.
-In addition to computing the dRMSD loss, the evaluation step computes the [TMscore](https://doi.org/10.1002/prot.20264) for each prediction (the `TMscore` program must be in the `PATH` or else provided via the `tmscore_path` argument).
+In addition to computing the dRMSD loss, the evaluation step computes the [TMscore](https://doi.org/10.1002/prot.20264) for each predicted structure (the `TMscore` program must be in the `PATH` or else provided via the `tmscore_path` argument).
 ```
 # download tensorflow records
 curl -LO "https://sharehost.hms.harvard.edu/sysbio/alquraishi/proteinnet/tfrecords/casp7.tar.gz"

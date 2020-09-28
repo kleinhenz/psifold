@@ -59,27 +59,29 @@ def compute_tm_f(coords, batch):
     return tm_scores
 
 def main():
-    parser = argparse.ArgumentParser(description="train RGN model")
+    parser = argparse.ArgumentParser(description="train RGN model",
+                                     formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=80, width=120))
+
     parser.add_argument("--input.file", default="input.h5", dest="input_file", help="hdf5 file containing proteinnet records")
     parser.add_argument("--train.section", default="/training/90", dest="train_section", help="hdf5 section containing training dataset")
     parser.add_argument("--val.section", default="/validation", dest="val_section", help="hdf5 section containing validation dataset")
     parser.add_argument("--test.section", default="/testing", dest="test_section", help="hdf5 section containing test dataset")
-    parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--train_size", type=int, default=None)
-    parser.add_argument("--complete_only", action="store_true")
-    parser.add_argument("--max_len", type=int, default=None)
-    parser.add_argument("--tmscore_path", type=str, default="TMscore")
-    parser.add_argument("--compute_tm", action="store_true")
+    parser.add_argument("--batch_size", type=int, default=32, help="batch size")
+    parser.add_argument("--train_size", type=int, default=None, help="total number of structures from training data to use (default=all)")
+    parser.add_argument("--complete_only", action="store_true", help="only use complete structures with no masked residues")
+    parser.add_argument("--max_len", type=int, default=None, help="only use structures with length <= max_len")
+    parser.add_argument("--tmscore_path", type=str, default="TMscore", help="path to TMscore program")
+    parser.add_argument("--compute_tm", action="store_true", help="compute tmscore in addition to loss (may timeout)")
 
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--learning_rate", type=float, default=1e-3)
-    parser.add_argument("--max_grad_norm", type=float, default=None)
+    parser.add_argument("--epochs", type=int, default=10, help="number of epochs to train for")
+    parser.add_argument("--learning_rate", type=float, default=1e-3, help="learning rate")
+    parser.add_argument("--max_grad_norm", type=float, default=None, help="rescale gradients if norm exceeds max_grad_norm")
 
-    parser.add_argument("--load_checkpoint", type=str, default="")
-    parser.add_argument("--checkpoint_path", type=str, default="checkpoints")
+    parser.add_argument("--load_checkpoint", type=str, default="", help="path of checkpoint to load model from")
+    parser.add_argument("--checkpoint_path", type=str, default="checkpoints", help="path to save checkpoints in")
 
-    parser.add_argument("--train", action="store_true")
-    parser.add_argument("--test", action="store_true")
+    parser.add_argument("--train", action="store_true", help="train the model")
+    parser.add_argument("--test", action="store_true", help="evaluate the model using data in {test.section}")
 
     # rgn parameters
     parser.add_argument("--hidden_size", type=int, default=800)

@@ -4,7 +4,7 @@ PsiFold is a pytorch library for protein structure prediction which implements t
 
 # Installation
 ```
-pip install git+ssh://git@github.com/kleinhenz/psifold.git
+pip install git+https://git@github.com/kleinhenz/psifold.git
 ```
 
 # Usage

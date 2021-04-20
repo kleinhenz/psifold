@@ -27,7 +27,7 @@ Pillow==7.2.0
 pluggy==0.13.1
 protobuf==3.13.0
 psifold @ git+ssh://git@github.com/kleinhenz/psifold.git@f514e7dbb2aba9a14dbb57137734a6606c235f8f
-py==1.9.0
+py==1.10.0
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pyparsing==2.4.7

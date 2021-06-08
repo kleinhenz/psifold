@@ -23,7 +23,7 @@ numpy==1.19.2
 oauthlib==3.1.0
 opt-einsum==3.3.0
 packaging==20.4
-Pillow==7.2.0
+Pillow==8.2.0
 pluggy==0.13.1
 protobuf==3.13.0
 psifold @ git+ssh://git@github.com/kleinhenz/psifold.git@f514e7dbb2aba9a14dbb57137734a6606c235f8f

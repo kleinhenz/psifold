@@ -34,7 +34,7 @@ class PsiFoldDataset(Dataset):
 
     def read_record(self, record):
         # identifier
-        ID = record["id"]
+        ID = record["id"].decode("utf-8")
 
         # primary amino acid sequence (N)
         seq = torch.from_numpy(record["primary"])
@@ -101,7 +101,7 @@ class RGNDataset(Dataset):
 
     def read_record(self, record):
         # identifier
-        ID = record["id"]
+        ID = record["id"].decode("utf-8")
 
         # primary amino acid sequence (N)
         seq = torch.from_numpy(record["primary"])

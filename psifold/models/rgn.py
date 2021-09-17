@@ -60,7 +60,7 @@ class RGN(nn.Module):
     def forward(self, batch):
         seq = batch["seq"] # (L x B)
         pssm = batch["pssm"] # (L x B x 21)
-        length = batch["length"] # (L,)
+        length = batch["length"].cpu() # (L,)
 
         L, B = seq.size()
 

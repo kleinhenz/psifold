@@ -16,6 +16,7 @@ curl -LO "https://sharehost.hms.harvard.edu/sysbio/alquraishi/proteinnet/tfrecor
 tar -xvzf casp7.tar.gz
 
 # convert tensorflow records to hdf5 file
+# note this is the only part of psifold which requires tensorflow
 proteinnet2hdf --output="casp7.h5" casp7
 
 # tensorflow records are no longer needed
